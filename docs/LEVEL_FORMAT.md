@@ -17,7 +17,7 @@ levels/<id>/
   "name": "Forêt moussue",
   "size": { "w": 8, "h": 4 },
   "tile_size": 32,
-  "legend": { "#": "mossy_ground", "=": "mossy_platform", "^": "mossy_thorns" },
+  "legend": { "#": "mossy_ground", "=": "mossy_ground", "^": "thorns_tile" },
   "layers": [
     {
       "name": "ground",
@@ -46,7 +46,7 @@ levels/<id>/
 | `name` | chaîne | oui | Nom affiché. |
 | `size` | `{ "w", "h" }` | oui | Taille de la grille **en tiles** (≥ 1×1). |
 | `tile_size` | entier | non (32) | Unités monde par tile. |
-| `legend` | objet `caractère → id` | non | Associe chaque caractère de tile à un id de pièce du tileset (voir `docs/ASSETS.md`). |
+| `legend` | objet `caractère → id` | non | Associe chaque caractère de tile à un id de pièce ou de famille de terrain auto-tilé (voir `docs/ASSETS.md`). |
 | `layers` | tableau de `Layer` | oui | Calques, dessinés dans l'ordre (premier = le plus au fond). |
 | `spawns` | tableau de `{ "x", "y" }` | oui | Points d'apparition des joueurs (au moins un). |
 | `entities` | tableau de `EntityDef` | non | Entités placées (ennemis…). |
@@ -118,6 +118,13 @@ Cette table est mise à jour par chaque issue qui ajoute un champ à `Rules`.
 Caractères : `.` = vide (réservé, interdit dans `legend`) ; tout autre caractère doit figurer dans
 `legend` et être de l'ASCII imprimable sans espace.
 
+Le calque détermine la collision : `=` utilise le terrain auto-tilé `mossy_ground` pour les
+plateformes d'une tile de haut. Un calque `hazard` peut répéter `thorns_tile`, une découpe
+d'épines dont le dessin tient dans une cellule (voir `docs/ASSETS.md`). La case entière est
+la zone de danger ; le canal alpha du sprite ne définit pas la collision. Dans le tutorial,
+le chemin prévu reste P1 → P2 → P3 au-dessus de la fosse ; les plateformes sont encore solides
+par le dessous, comportement suivi séparément par #34.
+
 ### Entités (`EntityDef`)
 | Champ | Description |
 |---|---|
@@ -140,11 +147,30 @@ sérialise en JSON avec un champ `code` (utilisé par l'éditeur et le MCP), par
 ```json
 { "code": "unknown_tile", "layer": "ground", "ch": "?", "row": 0, "col": 2 }
 ```
+
+`Level::validate_with_tile_ids(&BTreeSet<String>)` et
+`LevelBundle::validate_with_tile_ids(&BTreeSet<String>)` ajoutent la validation de **toutes**
+les entrées de légende, même inutilisées. L'appelant fournit les ids de pièces **et** les
+familles de terrain auto-tilé de son atlas. `mw_level` n'a aucune dépendance d'exécution à
+`mw_core` ni à un atlas particulier ; `validate()` reste disponible pour la seule structure.
+Les diagnostics d'ids inconnus suivent les erreurs structurelles (et les scripts manquants
+pour un bundle), dans l'ordre des caractères de légende. Exemple avec `TilesetAtlas` :
+
+```rust,ignore
+let tile_ids = atlas.pieces.keys().cloned().chain(
+    atlas.pieces.values().filter_map(|p| {
+        p.autotile.as_ref().map(|a| a.terrain.clone())
+    }),
+).collect();
+let errors = bundle.validate_with_tile_ids(&tile_ids);
+```
+
 | `code` | Cause |
 |---|---|
 | `invalid_id` | `id` vide ou hors `[a-z0-9_]`. |
 | `invalid_size` / `invalid_tile_size` | Taille de grille nulle / `tile_size` = 0. |
 | `invalid_legend_char` / `empty_tile_id` | Caractère de légende interdit / id de tile vide. |
+| `unknown_tile_id` | Id de légende absent de la palette fournie (`ch`, `id`). Seulement avec `validate_with_tile_ids`. |
 | `empty_layer_name` / `duplicate_layer_name` | Nom de calque vide / répété. |
 | `wrong_row_count` / `wrong_row_width` | Nombre de lignes ≠ `h` / longueur de ligne ≠ `w`. |
 | `unknown_tile` | Caractère absent de `legend` (signalé une fois, à sa première occurrence). |
