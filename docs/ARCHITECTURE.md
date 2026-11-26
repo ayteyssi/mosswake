@@ -56,4 +56,4 @@
   réutilise `mw_sim`.
 
 ## Unités
-- 1 tile = **32 unités monde** (à confirmer par l'issue tileset). Y vers le haut. Positions en `f32` dans la sim.
+- 1 tile = **32 unités monde** (confirmé par #2 : l'art du tileset est à 512 px/tile, le rendu met à l'échelle). Y vers le haut. Positions en `f32` dans la sim.

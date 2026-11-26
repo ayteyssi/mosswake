@@ -16,18 +16,80 @@ Toutes les animations sont des **séquences de frames PNG** numérotées `0000.p
 | `plants/plant_8_poison`, `plant_wind_1` | 30 | 512×512 |
 | `plants/plant_jump`, `plant_jump2` | 20 | 512×512 |
 
-Tilesets (`tilesets/mossy/`, grandes planches peintes, **pas** une grille régulière de petites tiles) :
-| Fichier | Taille |
-|---|---|
-| `tile_set.png` | 3584×3584 (blocs de terrain moussus, ~grille de 512 px) |
-| `floating_platforms.png` | 2048×2048 |
-| `decorations_and_hazards.png` | 4096×4096 |
-| `background_decoration.png` | 4096×4096 |
-| `hanging_plants.png` | 2048×2948 |
-| `mossy_hills.png` | 2048×2048 (parallax) |
+Tilesets (`tilesets/mossy/`, grandes planches peintes) :
+| Fichier | Taille | Contenu (voir « Atlas du tileset ») |
+|---|---|---|
+| `tile_set.png` | 3584×3584 | grille 7×7 de 512 px : terrain auto-tilé (47 cas) + 2 décors « trou » |
+| `floating_platforms.png` | 2048×2048 | 8 plateformes (1×1 à 4×1, une 1×2) |
+| `decorations_and_hazards.png` | 4096×4096 | 3 rochers, 6 lianes à épines (hazards), 13 petites plantes, 4 troncs |
+| `background_decoration.png` | 4096×4096 | 6 grandes silhouettes d'arrière-plan |
+| `hanging_plants.png` | 2048×2948 | 10 plantes pendantes (fougères, mousses, feuilles) |
+| `mossy_hills.png` | 2048×2048 | 7 buttes et touffes de mousse |
 
 Les sprites sont haute résolution : ils seront affichés à l'échelle (ex. wizard ≈ 2 tiles de haut).
-Le découpage des planches vit dans `assets/tilesets/mossy/atlas.json` (issue #2).
+
+## Atlas du tileset (`assets/tilesets/mossy/atlas.json`)
+Types, chargement et validation : `mw_core::tileset` (`TilesetAtlas::load`, `validate`,
+`autotile_candidates`).
+
+### Stratégie
+- **Échelle** : l'art du tileset est à **512 px par tile** (`pixels_per_tile`). Une tile de niveau
+  vaut toujours `tile_size` = 32 unités monde : le rendu met à l'échelle (`32 / 512`).
+- **Terrain (`tile_set.png`) = autotiling « blob » à 47 cas.** Chaque cellule de 512 px est dessinée
+  pour une configuration de voisins (bord, coin extérieur, coin intérieur, bande d'une tile, bloc
+  isolé…). Le niveau ne contient que `#` (terrain) ; le rendu calcule, pour chaque cellule pleine,
+  son voisinage 3×3 et choisit la pièce dont le motif `neighbors` correspond. Les 47 configurations
+  sont couvertes, **sans ambiguïté** (test exhaustif sur les 256 voisinages). Les deux cellules
+  « anneau de mousse autour d'un trou » ne sont pas des cas d'autotiling mais des décors
+  (`mossy_hole_a/b`) à poser sur une masse pleine.
+- **Plateformes, décors, hazards, parallax** = sprites libres : un rectangle source, une emprise en
+  tiles (`size`) et un ancrage. Le dessin peut déborder de son emprise (la mousse dépasse).
+- **Parallax** (`background_decoration`, `mossy_hills`) : silhouettes à dessiner sur des couches
+  d'arrière-plan défilant plus lentement ; elles peuvent aussi servir de décor de premier plan.
+
+### Format
+```json
+{
+  "version": 1,
+  "pixels_per_tile": 512,
+  "sheets": { "tile_set": { "file": "tile_set.png", "size": { "w": 3584, "h": 3584 } } },
+  "pieces": {
+    "mossy_ground_0_0": {
+      "sheet": "tile_set", "rect": { "x": 0, "y": 0, "w": 512, "h": 512 },
+      "kind": "terrain", "size": { "w": 1, "h": 1 }, "collision": true, "anchor": "center",
+      "autotile": { "terrain": "mossy_ground", "neighbors": "*.*/.##/*##" }
+    },
+    "platform_2x1_a": {
+      "sheet": "floating_platforms", "rect": { "x": 479, "y": 36, "w": 1049, "h": 450 },
+      "kind": "platform", "size": { "w": 2, "h": 1 }, "collision": true, "anchor": "center"
+    }
+  }
+}
+```
+| Champ de pièce | Description |
+|---|---|
+| `sheet`, `rect` | Planche et rectangle source (pixels, origine en haut à gauche, y vers le bas). Taille dessinée en tiles = `rect / pixels_per_tile`. |
+| `kind` | `terrain`, `platform` (on tient dessus), `decor`, `hazard` (blesse), `parallax`. |
+| `size` | Emprise sur la grille, en tiles entières. |
+| `collision` | Emprise solide ou non (vrai pour `terrain` et `platform`). |
+| `anchor` | Alignement du dessin sur l'emprise, toujours centré horizontalement : `center`, `bottom` (posé au sol), `top` (pendu au plafond). |
+| `autotile` | Pour `terrain` uniquement : famille (`terrain`, l'id qu'utilise une légende de niveau) et motif `neighbors`. |
+
+**Motif `neighbors`** : trois lignes de trois caractères séparées par `/`, du haut vers le bas,
+la cellule elle-même au centre. `#` = même terrain, `.` = autre chose, `*` = indifférent.
+Un coin n'est significatif que si ses deux côtés adjacents sont pleins (sinon il vaut `*`) :
+c'est ce qui réduit 256 voisinages à 47 cas. Exemple : `"*.*/.##/*##"` = coin haut-gauche d'un bloc.
+Si plusieurs pièces ont le même motif, ce sont des variantes : en choisir une de façon
+déterministe (ex. selon la position).
+
+### Comment l'atlas a été produit
+Les pièces libres ont été détectées automatiquement (composantes connexes du canal alpha,
+fragments isolés rattachés à la pièce la plus proche), puis corrigées et nommées à la main.
+Les motifs du terrain ont été déduits en échantillonnant le bord de chaque cellule (corps noir =
+voisin plein), puis vérifiés en rendant une carte de test auto-tilée. Aucun rectangle ne contient
+de pixel opaque d'une autre pièce (les rectangles de `hanging_leaf_a` et `hanging_moss_b` se
+touchent sur 4 px transparents). Le fichier est désormais la **source de vérité** : on l'édite à la main, et les tests
+(`crates/mw_core/tests/tileset.rs`) vérifient bornes, tailles des planches et couverture de l'autotiling.
 
 ## Manifest des animations (`assets/manifest.json`)
 Décrit chaque animation. Types et chargement : `mw_core::assets` (`AnimationManifest::load`,
