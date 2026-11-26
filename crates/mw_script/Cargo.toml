@@ -1,0 +1,9 @@
+[package]
+name = "mw_script"
+description = "Rhai scripting integration: sandbox, hooks and gameplay API."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]

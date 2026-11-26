@@ -1,0 +1,9 @@
+[package]
+name = "mw_net"
+description = "UDP networking: transport, protocol messages, LAN discovery."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]

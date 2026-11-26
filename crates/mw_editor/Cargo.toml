@@ -1,0 +1,9 @@
+[package]
+name = "mw_editor"
+description = "In-game level editor."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]

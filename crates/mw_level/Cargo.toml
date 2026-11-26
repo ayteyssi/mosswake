@@ -1,0 +1,9 @@
+[package]
+name = "mw_level"
+description = "Level file format (JSON), schema versioning and validation."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]

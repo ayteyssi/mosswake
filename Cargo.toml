@@ -1,0 +1,23 @@
+[workspace]
+resolver = "2"
+members = ["crates/*", "bins/*"]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+license = "MIT"
+repository = "https://github.com/ayteyssi/mosswake"
+
+# Shared dependency versions. Crates opt in with `foo.workspace = true`.
+# Before adding a dependency here, check compatibility (e.g. bevy_egui <-> bevy).
+# Shared dependency versions live in [workspace.dependencies]; crates opt in with
+# `foo.workspace = true`. Add entries only when a crate actually uses them (cargo warns
+# about unused ones). Internal crates: `mw_core = { path = "crates/mw_core" }`, etc.
+# Before adding a dependency, check version compatibility (e.g. bevy_egui <-> bevy).
+[workspace.dependencies]
+
+[profile.dev]
+opt-level = 1
+
+[profile.dev.package."*"]
+opt-level = 3

@@ -1,0 +1,9 @@
+[package]
+name = "mosswake-mcp"
+description = "MCP server (stdio) exposing the level editor to AI agents."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
