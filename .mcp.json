@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "mosswake": {
+      "command": "cargo",
+      "args": ["run", "--quiet", "-p", "mosswake-mcp"]
+    }
+  }
+}
