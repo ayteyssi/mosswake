@@ -17,6 +17,10 @@ repository = "https://github.com/ayteyssi/mosswake"
 bevy = { version = "0.20.1", default-features = false }
 serde = { version = "1.0.229", features = ["derive"] }
 serde_json = "1.0.154"
+# Networking (mw_net): transport-agnostic core + netcode UDP transport, compact serde codec.
+renet = "2.0.1"
+renet_netcode = "2.0.1"
+postcard = { version = "1.2.0", features = ["use-std"] }
 thiserror = "2.0.21"
 tempfile = "3.27.0"
 mw_core = { path = "crates/mw_core" }
