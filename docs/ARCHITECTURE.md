@@ -53,7 +53,12 @@
   **vides** (on peut tomber hors du niveau ; la mort/respawn relève de #9).
 
 ## Scripting (`mw_script`)
-- Moteur **Rhai** créé par niveau, sandbox : `set_max_operations`, `set_max_call_levels`, pas de module fichier/réseau.
+- Moteur **Rhai** créé par niveau (`mw_script::ScriptHost`), sans dépendance à l'ECS. Bac à sable **par construction** :
+  features `no_module` (pas d'`import` ni de fichier) et `no_time` (pas d'horloge), `eval` désactivé,
+  paquet standard seulement ; limites par appel (opérations, appels imbriqués, tailles) → un script
+  fautif est interrompu et rapporté (`ScriptError` : fichier, ligne, type), jamais de panic.
+- `state` : objet global persistant partagé par les scripts, visible dans les fonctions (résolu par
+  `on_var` vers une valeur Rhai *partagée*). Chaque fichier de script est indépendant.
 - Exécuté **uniquement côté serveur** (et en solo dans le process local). Les clients ne voient que les effets via snapshots.
 - Hooks (fonctions optionnelles définies par le script) : `on_level_start()`, `on_tick(dt)`,
   `on_player_spawn(p)`, `on_player_input(p, input)`, `on_collision(a, b)`, `on_damage(target, src, amount)`,
