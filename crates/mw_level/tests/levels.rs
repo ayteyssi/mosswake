@@ -3,6 +3,7 @@
 use std::fs;
 use std::path::PathBuf;
 
+use mw_core::tileset::TilesetAtlas;
 use mw_level::{LayerKind, LevelBundle, LEVEL_FILE};
 
 fn levels_dir() -> PathBuf {
@@ -21,11 +22,25 @@ fn level_dirs() -> Vec<PathBuf> {
 
 #[test]
 fn repo_levels_are_valid_and_canonical() {
+    let atlas_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../assets/tilesets/mossy");
+    let atlas = TilesetAtlas::load(&atlas_dir).expect("real atlas loads");
+    assert!(atlas.validate(&atlas_dir).is_empty(), "real atlas is valid");
+    let tile_ids = atlas
+        .pieces
+        .keys()
+        .cloned()
+        .chain(
+            atlas
+                .pieces
+                .values()
+                .filter_map(|p| p.autotile.as_ref().map(|a| a.terrain.clone())),
+        )
+        .collect();
     let dirs = level_dirs();
     assert!(!dirs.is_empty(), "no level found in {:?}", levels_dir());
     for dir in dirs {
         let bundle = LevelBundle::load(&dir).unwrap_or_else(|e| panic!("{dir:?}: {e}"));
-        let errors = bundle.validate();
+        let errors = bundle.validate_with_tile_ids(&tile_ids);
         assert!(errors.is_empty(), "{dir:?} is invalid: {errors:#?}");
 
         let dir_name = dir.file_name().and_then(|n| n.to_str()).unwrap_or_default();

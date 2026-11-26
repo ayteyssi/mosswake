@@ -50,6 +50,23 @@ pub struct Rules {
     pub coyote_time: f32,
     /// A jump pressed this long before landing still triggers on landing.
     pub jump_buffer: f32,
+
+    /// Horizontal dash speed, units/s.
+    pub dash_speed: f32,
+    /// Dash duration, rounded to ticks (at least one tick).
+    pub dash_duration: f32,
+    /// Minimum time between dash starts, seconds.
+    pub dash_cooldown: f32,
+    /// Additional jumps allowed before landing.
+    pub air_jumps: u32,
+    /// Maximum falling speed while pushing against a wall.
+    pub wall_slide_speed: f32,
+    /// Wall-jump impulse away from the wall.
+    pub wall_jump_speed_x: f32,
+    /// Wall-jump impulse against gravity.
+    pub wall_jump_speed_y: f32,
+    /// Time before horizontal movement can override a wall-jump impulse.
+    pub wall_jump_lock: f32,
 }
 
 impl Default for Rules {
@@ -69,6 +86,14 @@ impl Default for Rules {
             jump_cut: 0.4,
             coyote_time: 0.1,
             jump_buffer: 0.1,
+            dash_speed: 650.0,
+            dash_duration: 0.15,
+            dash_cooldown: 0.3,
+            air_jumps: 1,
+            wall_slide_speed: 100.0,
+            wall_jump_speed_x: 280.0,
+            wall_jump_speed_y: 600.0,
+            wall_jump_lock: 0.1,
         }
     }
 }
@@ -140,6 +165,21 @@ impl Rules {
         );
         check(non_negative(self.coyote_time), "coyote_time must be >= 0");
         check(non_negative(self.jump_buffer), "jump_buffer must be >= 0");
+        for (value, name) in [
+            (self.dash_speed, "dash_speed"),
+            (self.dash_duration, "dash_duration"),
+            (self.wall_jump_speed_x, "wall_jump_speed_x"),
+            (self.wall_jump_speed_y, "wall_jump_speed_y"),
+        ] {
+            check(positive(value), &format!("{name} must be > 0"));
+        }
+        for (value, name) in [
+            (self.dash_cooldown, "dash_cooldown"),
+            (self.wall_slide_speed, "wall_slide_speed"),
+            (self.wall_jump_lock, "wall_jump_lock"),
+        ] {
+            check(non_negative(value), &format!("{name} must be >= 0"));
+        }
         for id in &self.mechanics {
             if !known.contains(id) {
                 errors.push(RulesError::UnknownMechanic(id.clone()));

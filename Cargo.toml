@@ -22,6 +22,10 @@ renet = "2.0.1"
 renet_netcode = "2.0.1"
 postcard = { version = "1.2.0", features = ["use-std"] }
 thiserror = "2.0.21"
+# Scripting (sandboxed by construction): `sync` so the engine can live in a Bevy resource;
+# `no_time` removes wall-clock functions and `no_module` removes `import` / file access;
+# no default features so internal hashing uses no OS randomness (`ahash/runtime-rng`).
+rhai = { version = "1.27.0", default-features = false, features = ["std", "sync", "no_time", "no_module"] }
 # Binaries only (libraries use thiserror).
 anyhow = "1.0.105"
 rmcp = { version = "3.12.0", default-features = false, features = ["server", "macros", "transport-io"] }

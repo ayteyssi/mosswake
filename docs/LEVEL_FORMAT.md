@@ -17,7 +17,7 @@ levels/<id>/
   "name": "Forêt moussue",
   "size": { "w": 8, "h": 4 },
   "tile_size": 32,
-  "legend": { "#": "mossy_ground", "=": "mossy_platform", "^": "mossy_thorns" },
+  "legend": { "#": "mossy_ground", "=": "mossy_ground", "^": "thorns_tile" },
   "layers": [
     {
       "name": "ground",
@@ -46,7 +46,7 @@ levels/<id>/
 | `name` | chaîne | oui | Nom affiché. |
 | `size` | `{ "w", "h" }` | oui | Taille de la grille **en tiles** (≥ 1×1). |
 | `tile_size` | entier | non (32) | Unités monde par tile. |
-| `legend` | objet `caractère → id` | non | Associe chaque caractère de tile à un id de pièce du tileset (voir `docs/ASSETS.md`). |
+| `legend` | objet `caractère → id` | non | Associe chaque caractère de tile à un id de pièce ou de famille de terrain auto-tilé (voir `docs/ASSETS.md`). |
 | `layers` | tableau de `Layer` | oui | Calques, dessinés dans l'ordre (premier = le plus au fond). |
 | `spawns` | tableau de `{ "x", "y" }` | oui | Points d'apparition des joueurs (au moins un). |
 | `entities` | tableau de `EntityDef` | non | Entités placées (ennemis…). |
@@ -73,9 +73,33 @@ mécanique non implémentée fait **refuser le niveau** au chargement. Distances
 | `jump_cut` | 0..=1 | `0.4` | Facteur appliqué à la vitesse montante si on relâche tôt (saut à hauteur variable). |
 | `coyote_time` | secondes ≥ 0 | `0.1` | Délai pendant lequel on peut encore sauter après avoir quitté un rebord. |
 | `jump_buffer` | secondes ≥ 0 | `0.1` | Un saut pressé juste avant d'atterrir part à l'atterrissage. |
+| `dash_speed` | nombre > 0 | `650.0` | Vitesse du dash horizontal (u/s). |
+| `dash_duration` | secondes > 0 | `0.15` | Durée du dash, arrondie en ticks, au moins 1 (9 par défaut). |
+| `dash_cooldown` | secondes ≥ 0 | `0.3` | Intervalle minimum entre deux départs de dash (18 ticks). |
+| `air_jumps` | entier non signé | `1` | Sauts supplémentaires avant de retoucher le sol (`0` les supprime). |
+| `wall_slide_speed` | nombre ≥ 0 | `100.0` | Vitesse de chute max en poussant contre un mur. |
+| `wall_jump_speed_x` / `wall_jump_speed_y` | nombre > 0 | `280.0` / `600.0` | Impulsion loin du mur / contre la gravité (u/s). |
+| `wall_jump_lock` | secondes ≥ 0 | `0.1` | Durée sans contrôle horizontal après le wall-jump (6 ticks). |
 
-Mécaniques disponibles : `movement` (course), `jump` (saut). Les suivantes (`double_jump`, `dash`,
-`wall_jump`, `melee`…) arrivent avec #6 et #7.
+Mécaniques disponibles : `movement` (course), `jump` (saut), `dash`, `double_jump` et `wall_jump`.
+Les trois dernières sont enregistrées mais **désactivées par défaut**. Exemple :
+`"mechanics": ["movement", "jump", "dash", "double_jump", "wall_jump"]`.
+`melee` sera ajouté par #7. Toutes les durées sont arrondies au tick le plus proche.
+
+- `dash` : nouveau front de `DASH`, axe horizontal ou orientation précédente, direction figée
+  pendant le dash. Gravité suspendue, collision solide conservée. Une charge avant de retoucher
+  le sol, cooldown compté depuis le départ ; garder le bouton enfoncé ne relance pas le dash.
+  À la fin, la vitesse X est ramenée au plus à `run_speed` (0 sans `movement`).
+- `double_jump` : nouveau front de `JUMP` en l'air, jusqu'à `air_jumps` fois. Un saut au sol ou
+  en coyote time ne consomme pas de charge. Recharge au sol, même avec gravité inversée.
+- `wall_jump` : pousser vers un mur limite la chute à `wall_slide_speed`. Un nouveau front de
+  `JUMP` en contact avec le mur propulse à l'opposé et contre la gravité. Le verrou horizontal
+  évite que l'input maintenu annule immédiatement l'impulsion. Pas de recharge aérienne au mur.
+
+Les sauts aériens et muraux peuvent fonctionner sans `jump` ; le saut variable et le buffer
+restent des fonctionnalités de `jump`. Sur un même tick : saut au sol/coyote → wall-jump → saut
+aérien ; seul le premier possible est exécuté, puis un départ de dash prend la priorité sur la
+vitesse. Pendant un dash en cours, les sauts sont ignorés.
 
 **Repères de level design (règles par défaut)** : un saut monte de 4 tiles au maximum. Prévoir
 **3 tiles au plus** entre deux surfaces pour un saut confortable. En élan, on franchit ~4 tiles
@@ -93,6 +117,13 @@ Cette table est mise à jour par chaque issue qui ajoute un champ à `Rules`.
 
 Caractères : `.` = vide (réservé, interdit dans `legend`) ; tout autre caractère doit figurer dans
 `legend` et être de l'ASCII imprimable sans espace.
+
+Le calque détermine la collision : `=` utilise le terrain auto-tilé `mossy_ground` pour les
+plateformes d'une tile de haut. Un calque `hazard` peut répéter `thorns_tile`, une découpe
+d'épines dont le dessin tient dans une cellule (voir `docs/ASSETS.md`). La case entière est
+la zone de danger ; le canal alpha du sprite ne définit pas la collision. Dans le tutorial,
+le chemin prévu reste P1 → P2 → P3 au-dessus de la fosse ; les plateformes sont encore solides
+par le dessous, comportement suivi séparément par #34.
 
 ### Entités (`EntityDef`)
 | Champ | Description |
@@ -116,11 +147,30 @@ sérialise en JSON avec un champ `code` (utilisé par l'éditeur et le MCP), par
 ```json
 { "code": "unknown_tile", "layer": "ground", "ch": "?", "row": 0, "col": 2 }
 ```
+
+`Level::validate_with_tile_ids(&BTreeSet<String>)` et
+`LevelBundle::validate_with_tile_ids(&BTreeSet<String>)` ajoutent la validation de **toutes**
+les entrées de légende, même inutilisées. L'appelant fournit les ids de pièces **et** les
+familles de terrain auto-tilé de son atlas. `mw_level` n'a aucune dépendance d'exécution à
+`mw_core` ni à un atlas particulier ; `validate()` reste disponible pour la seule structure.
+Les diagnostics d'ids inconnus suivent les erreurs structurelles (et les scripts manquants
+pour un bundle), dans l'ordre des caractères de légende. Exemple avec `TilesetAtlas` :
+
+```rust,ignore
+let tile_ids = atlas.pieces.keys().cloned().chain(
+    atlas.pieces.values().filter_map(|p| {
+        p.autotile.as_ref().map(|a| a.terrain.clone())
+    }),
+).collect();
+let errors = bundle.validate_with_tile_ids(&tile_ids);
+```
+
 | `code` | Cause |
 |---|---|
 | `invalid_id` | `id` vide ou hors `[a-z0-9_]`. |
 | `invalid_size` / `invalid_tile_size` | Taille de grille nulle / `tile_size` = 0. |
 | `invalid_legend_char` / `empty_tile_id` | Caractère de légende interdit / id de tile vide. |
+| `unknown_tile_id` | Id de légende absent de la palette fournie (`ch`, `id`). Seulement avec `validate_with_tile_ids`. |
 | `empty_layer_name` / `duplicate_layer_name` | Nom de calque vide / répété. |
 | `wrong_row_count` / `wrong_row_width` | Nombre de lignes ≠ `h` / longueur de ligne ≠ `w`. |
 | `unknown_tile` | Caractère absent de `legend` (signalé une fois, à sa première occurrence). |
