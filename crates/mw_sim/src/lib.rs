@@ -16,11 +16,15 @@ use mw_level::{Level, ValidationError};
 mod grid;
 mod harness;
 mod physics;
+mod player;
 mod rules;
 
 pub use grid::{Aabb, CollisionGrid, SweepResult};
 pub use harness::{BodyState, SimHarness};
 pub use physics::{Body, Contacts, Position, Velocity};
+pub use player::{
+    seconds_to_ticks, spawn_player, Facing, Player, PlayerControl, PlayerState, JUMP, MOVEMENT,
+};
 pub use rules::{mechanic_active, KnownMechanics, RegisterMechanic, Rules, RulesError};
 
 /// Simulation ticks per second.
@@ -113,7 +117,7 @@ impl Plugin for SimPlugin {
                     .chain(),
             )
             .add_systems(FixedUpdate, advance_tick.in_set(SimSet::Cleanup))
-            .add_plugins(physics::plugin);
+            .add_plugins((physics::plugin, player::plugin));
     }
 }
 
