@@ -24,6 +24,10 @@ postcard = { version = "1.2.0", features = ["use-std"] }
 # Content hash of transferred levels (cache key and integrity check).
 sha2 = "0.11.2"
 thiserror = "2.0.21"
+# Scripting (sandboxed by construction): `sync` so the engine can live in a Bevy resource;
+# `no_time` removes wall-clock functions and `no_module` removes `import` / file access;
+# no default features so internal hashing uses no OS randomness (`ahash/runtime-rng`).
+rhai = { version = "1.27.0", default-features = false, features = ["std", "sync", "no_time", "no_module"] }
 # Binaries only (libraries use thiserror).
 anyhow = "1.0.105"
 tempfile = "3.27.0"

@@ -16,6 +16,7 @@ use serde::{Deserialize, Serialize};
 
 mod grid;
 mod harness;
+pub mod mechanics;
 mod physics;
 mod player;
 mod rules;
@@ -123,7 +124,7 @@ impl Plugin for SimPlugin {
                     .chain(),
             )
             .add_systems(FixedUpdate, advance_tick.in_set(SimSet::Cleanup))
-            .add_plugins((physics::plugin, player::plugin));
+            .add_plugins((physics::plugin, player::plugin, mechanics::plugin));
     }
 }
 

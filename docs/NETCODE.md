@@ -43,6 +43,8 @@ ni réordonner, seulement **ajouter** des variantes en fin d'enum.
 
 Tout le reste (`protocol::ClientMessage`, `ServerMessage`, …) est versionné :
 **toute modification d'un message incrémente `PROTOCOL_VERSION`**.
+Version actuelle : **2** (ajout de `PlayerSnapshot::mobility` par #6 ; un client v1 reçoit
+`VersionMismatch` au handshake). Les formats de handshake gelés restent identiques.
 
 ## Session
 - `PlayerId` : plus petit slot libre (`0..max_players`). Le netcode accepte quelques connexions de
@@ -153,9 +155,9 @@ Charge utile de `ServerMessage::Snapshot { tick, data }` : `data` = `mw_sim::Sna
 | `tick` | égal au `tick` du message |
 | `bodies[]` | tous les corps, **triés par `SimId`** |
 | `bodies[].id`, `position`, `velocity`, `contacts` | état physique (pieds, unités monde, y vers le haut) |
-| `bodies[].player` | si c'est un joueur : `player` (`PlayerId`), `state` et `facing` (animation), `control` (inputs et minuteurs de saut, pour que le client re-simule son joueur à l'identique, #14) |
+| `bodies[].player` | si c'est un joueur : `player` (`PlayerId`), `state` et `facing` (animation), `control` (inputs et minuteurs de saut) et `mobility` (direction/durée/cooldown/charge du dash, sauts aériens consommés, verrou mural et arbitration du tick), pour que le client re-simule son joueur à l'identique (#14) |
 
 Un client trouve son propre corps avec `snapshot.player(mon_player_id)`. L'encodage du snapshot
 fait **partie du protocole** : un test (`bins/mosswake/tests/server.rs`) fige ses octets, et toute
 modification des types de `mw_sim::snapshot` (ou de ce qu'ils contiennent : `Contacts`,
-`PlayerControl`, `PlayerState`, `Facing`) incrémente `PROTOCOL_VERSION`.
+`PlayerControl`, `MobilityState`, `PlayerState`, `Facing`) incrémente `PROTOCOL_VERSION`.
