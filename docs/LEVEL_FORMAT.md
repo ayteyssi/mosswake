@@ -50,10 +50,23 @@ levels/<id>/
 | `layers` | tableau de `Layer` | oui | Calques, dessinés dans l'ordre (premier = le plus au fond). |
 | `spawns` | tableau de `{ "x", "y" }` | oui | Points d'apparition des joueurs (au moins un). |
 | `entities` | tableau de `EntityDef` | non | Entités placées (ennemis…). |
-| `rules` | objet `clé → valeur JSON` | non | Surcharges des `Rules` de la simulation. Les clés sont vérifiées par `mw_sim`, pas par `mw_level`. |
+| `rules` | objet `clé → valeur JSON` | non | Surcharges des `Rules` de la simulation (voir ci-dessous). Les clés sont vérifiées par `mw_sim` au chargement, pas par `mw_level`. |
 | `scripts` | tableau de chemins | non | Scripts Rhai, relatifs au dossier du niveau, de la forme `scripts/**/*.rhai`. |
 
 Les champs inconnus sont **refusés** au chargement (une faute de frappe ne passe pas inaperçue).
+
+### Règles (`rules`)
+Surcharges des valeurs par défaut de `mw_sim::Rules`. Une clé inconnue, un mauvais type ou une
+mécanique non implémentée fait **refuser le niveau** au chargement. Distances en unités monde
+(1 tile = `tile_size`), vitesses en unités/s.
+
+| Clé | Type | Défaut | Description |
+|---|---|---|---|
+| `gravity` | nombre | `-1800.0` | Accélération verticale (u/s²). Négative = vers le bas ; positive = gravité inversée. |
+| `max_fall_speed` | nombre > 0 | `900.0` | Vitesse maximale dans le sens de la gravité (u/s). |
+| `mechanics` | liste de chaînes | `[]` | Mécaniques actives. Aucune n'est encore implémentée (#5, #6, #7 les ajoutent). |
+
+Cette table est mise à jour par chaque issue qui ajoute un champ à `Rules`.
 
 ### Calques (`Layer`)
 | Champ | Description |
