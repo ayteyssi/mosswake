@@ -80,7 +80,8 @@ mosswake host --level <id> [--port 47800] [--name Host] [--max-players 4] [--lev
 - **`ServerSession`** (`mosswake::server`) : possède la seule vraie simulation (`mw_sim`, pilotée
   tick par tick via `SimHarness`) et un `NetServer`. `tick()` fait, dans l'ordre : réception
   réseau → `spawn_player` à chaque `PlayerConnected` / `despawn_player` à chaque
-  `PlayerDisconnected` → rangement des inputs reçus → **un** pas de simulation → snapshot si le
+  `PlayerDisconnected` → rangement des inputs reçus (un client exclu pour message indécodable
+  est retiré dès ce tick) → **un** pas de simulation → snapshot si le
   tick est pair → envoi.
 - **Boucle temps réel** (`main.rs`) : appelle `tick()` à 60 Hz d'horloge murale. C'est le seul
   endroit qui lit l'horloge, et seulement pour cadencer ; après un gel de plus de 250 ms
@@ -114,6 +115,9 @@ mosswake host --level <id> [--port 47800] [--name Host] [--max-players 4] [--lev
   sur 3 perdus). Prix : 50 ms de délai sur les réactions du joueur, que la prédiction client (#14)
   masquera ; #14 remplacera aussi cette estimation par une vraie synchronisation qui tient compte
   de la latence.
+- Si le client se retrouve plus de `RESYNC_AHEAD_TICKS` (30) ticks en avance sur le dernier snapshot
+  (serveur figé, horloges qui dérivent), il se recale : sinon il dériverait jusqu'à ce que le serveur
+  ignore tous ses inputs comme trop en avance.
 
 ### Snapshot (`mw_sim::Snapshot`)
 Charge utile de `ServerMessage::Snapshot { tick, data }` : `data` = `mw_sim::Snapshot` encodé avec

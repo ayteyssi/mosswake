@@ -18,6 +18,11 @@ pub const INPUT_REDUNDANCY: usize = 4;
 /// (#14) hides it.
 pub const INPUT_LEAD_TICKS: u64 = 3;
 
+/// If our tick count runs this far ahead of the newest snapshot (server stalled, clocks
+/// drifting apart), resynchronize. Without it the client would drift until the server drops
+/// all its inputs as too far in the future (`MAX_INPUT_LEAD_TICKS`).
+pub const RESYNC_AHEAD_TICKS: u64 = 30;
+
 /// Turns one local input per tick into [`ClientMessage::Inputs`].
 ///
 /// Tick estimate: the next input is for the tick of the newest snapshot plus
@@ -33,15 +38,17 @@ pub struct InputSender {
 
 impl InputSender {
     /// A snapshot of tick `tick` arrived: the server's next tick is at least `tick`.
+    ///
+    /// Behind the target: jump ahead. Ahead by up to [`RESYNC_AHEAD_TICKS`]: keep counting
+    /// (snapshots are older than the server's current tick). Further ahead: come back.
     pub fn on_snapshot(&mut self, tick: u64) {
         let target = tick.saturating_add(INPUT_LEAD_TICKS);
-        match self.next_tick {
-            Some(next) if next >= target => {}
-            _ => {
-                // Jumping ahead breaks the contiguous history: start over.
-                self.next_tick = Some(target);
-                self.history.clear();
-            }
+        let in_range =
+            |next: u64| (target..=target.saturating_add(RESYNC_AHEAD_TICKS)).contains(&next);
+        if !self.next_tick.is_some_and(in_range) {
+            // Moving the tick breaks the contiguous history: start over.
+            self.next_tick = Some(target);
+            self.history.clear();
         }
     }
 
@@ -111,6 +118,28 @@ mod tests {
             sent(sender.next(input(3))),
             (10 + INPUT_LEAD_TICKS, vec![1, 2, 3])
         );
+    }
+
+    #[test]
+    fn running_far_ahead_resynchronizes() {
+        let mut sender = InputSender::default();
+        sender.on_snapshot(10);
+        // The server stalls: 100 local ticks without a newer snapshot.
+        for _ in 0..100 {
+            sender.next(input(0));
+        }
+        sender.on_snapshot(12);
+        assert_eq!(
+            sent(sender.next(input(7))),
+            (12 + INPUT_LEAD_TICKS, vec![7])
+        );
+        // A little ahead is normal (snapshots lag the server): no reset.
+        for _ in 0..RESYNC_AHEAD_TICKS / 2 {
+            sender.next(input(0));
+        }
+        sender.on_snapshot(14);
+        let (_, inputs) = sent(sender.next(input(1)));
+        assert_eq!(inputs.len(), INPUT_REDUNDANCY, "history kept");
     }
 
     #[test]

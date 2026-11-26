@@ -63,20 +63,8 @@ impl ServerSession {
     /// every [`SNAPSHOT_INTERVAL_TICKS`], network out. Returns this tick's session events.
     pub fn tick(&mut self) -> Result<Vec<ServerNetEvent>> {
         self.net.update(TICK).context("network update failed")?;
-        let events: Vec<ServerNetEvent> = self.net.events().collect();
-        for event in &events {
-            match event {
-                ServerNetEvent::PlayerConnected(info) => {
-                    self.sim.spawn_player(info.player);
-                    self.inputs.insert(info.player, InputBuffer::default());
-                }
-                ServerNetEvent::PlayerDisconnected { player, .. } => {
-                    self.sim.despawn_player(*player);
-                    self.inputs.remove(player);
-                }
-                ServerNetEvent::ClientRejected { .. } => {}
-            }
-        }
+        let mut events = Vec::new();
+        self.apply_session_events(&mut events);
 
         // `current` is the tick about to be simulated: inputs for it are used now.
         let current = self.sim.tick();
@@ -89,6 +77,8 @@ impl ServerSession {
                 }
             }
         }
+        // Receiving can kick a client (undecodable message): drop its body this tick.
+        self.apply_session_events(&mut events);
         let tick_inputs = TickInputs(
             self.inputs
                 .iter_mut()
@@ -107,6 +97,24 @@ impl ServerSession {
         }
         self.net.flush();
         Ok(events)
+    }
+
+    /// Spawns and despawns players for the pending session events, appended to `out`.
+    fn apply_session_events(&mut self, out: &mut Vec<ServerNetEvent>) {
+        for event in self.net.events().collect::<Vec<_>>() {
+            match &event {
+                ServerNetEvent::PlayerConnected(info) => {
+                    self.sim.spawn_player(info.player);
+                    self.inputs.insert(info.player, InputBuffer::default());
+                }
+                ServerNetEvent::PlayerDisconnected { player, .. } => {
+                    self.sim.despawn_player(*player);
+                    self.inputs.remove(player);
+                }
+                ServerNetEvent::ClientRejected { .. } => {}
+            }
+            out.push(event);
+        }
     }
 
     /// The simulation (read state in tests and tools).
