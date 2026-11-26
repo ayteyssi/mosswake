@@ -7,7 +7,7 @@ encore implémentées sont signalées par leur issue.
 ## Vue d'ensemble
 - Transport : UDP via `renet` (canaux, fiabilité) sur `renet_netcode` (connexions, timeouts).
   Port de jeu par défaut **47800** (`DEFAULT_PORT`), découverte LAN en broadcast sur **47801**
-  (`DISCOVERY_PORT`, #15).
+  (`DISCOVERY_PORT`, voir *Découverte LAN*).
 - Mode **non sécurisé** de netcode (pas de jeton signé ni de clé) : jeu en réseau local de confiance.
 - Serveur autoritaire, tick 60 Hz, snapshots 30 Hz, prédiction client + réconciliation,
   interpolation ~100 ms (#14).
@@ -55,6 +55,24 @@ Version actuelle : **2** (ajout de `PlayerSnapshot::mobility` par #6 ; un client
 - `TIMEOUT` = **15 s**, imposé par renetcode en mode non sécurisé.
 - Inputs : `Inputs { first_tick, inputs }` porte les derniers ticks (redondance contre la perte),
   voir « Application des inputs ».
+
+## Découverte LAN (#15)
+Rejoindre sans taper d'IP. `mw_net::discovery` :
+- Chaque `server` / `host` (sauf `--no-announce`) **diffuse toutes les secondes** une `Announcement`
+  en broadcast UDP sur le port **47801** : version du protocole, port de jeu, nom de la partie
+  (`--name`), niveau, joueurs connectés / max.
+- Datagramme au **format gelé** : `b"MWLN"` + postcard de `Announcement`, avec la version en premier
+  champ et des ajouts seulement en fin. Toute version liste toute partie et indique si elle est
+  **incompatible**, au lieu de ne pas la voir. Les octets en trop (champs futurs) sont tolérés ;
+  les datagrammes étrangers ou abusifs (> 512 octets, textes > 48 octets ou avec caractères de
+  contrôle) sont ignorés. Ce n'est pas un message de jeu : il ne fait pas varier `PROTOCOL_VERSION`.
+- `Browser` écoute le port, garde une partie par adresse (IP de l'émetteur + port annoncé) et
+  l'oublie après **3 s** de silence (temps passé explicitement à `update(dt)`).
+- `mosswake lan [--seconds 3]` affiche les parties entendues (adresse, nom, niveau, joueurs,
+  open / full / incompatible).
+- Réseaux qui filtrent le broadcast : `ServerSession::announce_to(adresses)`.
+
+Le menu graphique (Héberger / Rejoindre) est suivi par **#49** (il attend le client rendu, #14).
 
 ## Utilisation
 Boucle par frame, avec le temps écoulé passé explicitement (aucune lecture d'horloge interne,
