@@ -20,12 +20,32 @@
 - **`Rules`** (ressource) : *tous* les paramètres de gameplay (gravité, vitesses, hauteurs de saut,
   nb de sauts, dash, wall-jump, PV, dégâts, PvP on/off, friction…). Valeurs par défaut dans le code,
   surchargées par `level.json` → `rules`, puis modifiables à chaud par les scripts.
-- **Mécaniques = plugins activables** : `MechanicsPlugin` enregistre chaque mécanique
-  (`movement`, `jump`, `double_jump`, `dash`, `wall_jump`, `melee`, …) avec un identifiant ;
-  le niveau liste celles qui sont actives (`rules.mechanics`). Ajouter une mécanique =
-  nouveau module + entrée au registre + paramètres dans `Rules` + test headless.
-- Systèmes ordonnés par `SystemSet` explicites : `Input → Script(pre) → Mechanics → Physics → Collisions → Script(post) → Cleanup`.
-- Physique maison simple : AABB contre tilemap (grille) + AABB entre entités. Pas de moteur physique externe (déterminisme, contrôle).
+  Implémentation : `Rules::with_overrides` sérialise les règles en objet JSON, y applique les clés
+  du niveau puis les relit ; clé inconnue ou mauvais type = erreur au chargement. **Ajouter un
+  paramètre = ajouter un champ avec sa valeur par défaut**, il devient surchargeable sans autre code.
+- **Mécaniques = plugins activables** : chaque plugin de mécanique déclare son identifiant avec
+  `app.register_mechanic("dash")` (`movement`, `jump`, `double_jump`, `dash`, `wall_jump`, `melee`, …)
+  et ses systèmes tournent sous `.run_if(mechanic_active("dash"))` dans `SimSet::Mechanics` ;
+  le niveau liste celles qui sont actives (`rules.mechanics`, ids inconnus refusés au chargement).
+  Ajouter une mécanique = nouveau module + `register_mechanic` + paramètres dans `Rules` + test headless.
+- Systèmes ordonnés par `SimSet` (chaînés dans `FixedUpdate`) : `Input → ScriptPre → Mechanics → Physics → Collisions → ScriptPost → Cleanup`.
+- **Temps** : les systèmes n'utilisent jamais l'horloge ; ils avancent de `TICK_DT = 1/60 s` par tick.
+  `SimHarness::new(&level)` + `step(n, &inputs)` exécute la sim tick par tick pour les tests et outils.
+- **Identité** : `SimId` (alloué dans l'ordre de spawn) identifie une entité de façon identique sur
+  toutes les machines ; `Entity` de Bevy ne doit pas sortir de la sim.
+
+### Physique (`mw_sim::physics`, `mw_sim::grid`)
+- Maison, sans moteur externe (déterminisme, contrôle). Unités monde (1 tile = `tile_size` = 32), Y vers le haut.
+- `Position` = **pieds** (milieu du bas de la boîte), comme les positions du format de niveau ; `Body { size, gravity_scale }`, `Velocity` en unités/s.
+- `Physics` : gravité (`Rules::gravity`, plafonnée à `max_fall_speed` dans son sens ; les corps à
+  `gravity_scale = 0` ne sont ni accélérés ni plafonnés), puis déplacement **axe par axe (X puis Y)** :
+  chaque colonne/ligne de tiles traversée est testée, le corps s'arrête pile contre la première tile
+  solide → aucun tunneling quelle que soit la vitesse ; la vitesse est annulée sur l'axe bloqué.
+- `Collisions` : drapeaux `Contacts { grounded, on_ceiling, on_wall_left, on_wall_right }` par sondes de
+  0,01 unité. `grounded` suit le sens de la gravité (gravité inversée → « sol » au-dessus).
+  Les collisions entre entités (dégâts, triggers) s'ajouteront dans ce set.
+- Hors de la grille : colonnes à gauche/droite **solides** (murs invisibles), lignes en dessous/au-dessus
+  **vides** (on peut tomber hors du niveau ; la mort/respawn relève de #9).
 
 ## Scripting (`mw_script`)
 - Moteur **Rhai** créé par niveau, sandbox : `set_max_operations`, `set_max_call_levels`, pas de module fichier/réseau.

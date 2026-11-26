@@ -3,6 +3,7 @@
 //! See `docs/ARCHITECTURE.md` for this crate's responsibilities and boundaries.
 
 pub mod assets;
+pub mod input;
 pub mod tileset;
 
 /// Crate name, used in logs.
