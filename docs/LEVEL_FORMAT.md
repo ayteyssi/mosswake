@@ -64,7 +64,23 @@ mécanique non implémentée fait **refuser le niveau** au chargement. Distances
 |---|---|---|---|
 | `gravity` | nombre | `-1800.0` | Accélération verticale (u/s²). Négative = vers le bas ; positive = gravité inversée. |
 | `max_fall_speed` | nombre > 0 | `900.0` | Vitesse maximale dans le sens de la gravité (u/s). |
-| `mechanics` | liste de chaînes | `[]` | Mécaniques actives. Aucune n'est encore implémentée (#5, #6, #7 les ajoutent). |
+| `mechanics` | liste de chaînes | `["movement", "jump"]` | Mécaniques actives (voir ci-dessous). Remplace la liste entière. |
+| `player_width` / `player_height` | nombre > 0 | `24.0` / `56.0` | Hitbox du joueur (0,75 × 1,75 tile). |
+| `run_speed` | nombre ≥ 0 | `220.0` | Vitesse de course max (u/s, ~6,9 tiles/s). |
+| `ground_accel` / `ground_decel` | nombre > 0 | `2400.0` / `3200.0` | Accélération / freinage au sol (u/s²). |
+| `air_accel` / `air_decel` | nombre > 0 | `1500.0` / `600.0` | Accélération / freinage en l'air (u/s²) ; faible freinage = élan conservé. |
+| `jump_height` | nombre ≥ 0 | `128.0` | Hauteur d'un saut complet (u, 4 tiles), garantie quelle que soit la gravité. |
+| `jump_cut` | 0..=1 | `0.4` | Facteur appliqué à la vitesse montante si on relâche tôt (saut à hauteur variable). |
+| `coyote_time` | secondes ≥ 0 | `0.1` | Délai pendant lequel on peut encore sauter après avoir quitté un rebord. |
+| `jump_buffer` | secondes ≥ 0 | `0.1` | Un saut pressé juste avant d'atterrir part à l'atterrissage. |
+
+Mécaniques disponibles : `movement` (course), `jump` (saut). Les suivantes (`double_jump`, `dash`,
+`wall_jump`, `melee`…) arrivent avec #6 et #7.
+
+**Repères de level design (règles par défaut)** : un saut monte de 4 tiles au maximum. Prévoir
+**3 tiles au plus** entre deux surfaces pour un saut confortable. En élan, on franchit ~4 tiles
+de vide à niveau égal, davantage en descendant. Le joueur passe sous un plafond à 2 tiles.
+`crates/mw_sim/tests/tutorial.rs` montre comment vérifier un parcours par un test headless.
 
 Cette table est mise à jour par chaque issue qui ajoute un champ à `Rules`.
 

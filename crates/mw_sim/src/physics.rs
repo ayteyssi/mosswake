@@ -83,7 +83,7 @@ fn move_and_collide(
     }
 }
 
-fn update_contacts(
+pub(crate) fn update_contacts(
     grid: Option<Res<CollisionGrid>>,
     rules: Res<Rules>,
     mut bodies: Query<(&Body, &Position, &mut Contacts)>,

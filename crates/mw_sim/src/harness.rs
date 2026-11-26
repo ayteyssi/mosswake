@@ -2,11 +2,12 @@
 //! (here and in other crates) and for tools such as the MCP `simulate_level`.
 
 use bevy::prelude::*;
+use mw_core::input::PlayerId;
 use mw_level::Level;
 
 use crate::{
-    load_level, Body, Contacts, Position, SimId, SimIds, SimLoadError, SimPlugin, Tick, TickInputs,
-    Velocity,
+    load_level, Body, Contacts, Facing, PlayerState, Position, SimId, SimIds, SimLoadError,
+    SimPlugin, Tick, TickInputs, Velocity,
 };
 
 /// A loaded simulation advanced explicitly with [`SimHarness::step`].
@@ -59,6 +60,51 @@ impl SimHarness {
         let id = world.resource_mut::<SimIds>().allocate();
         world.spawn((id, body, Position(feet), Velocity(velocity)));
         id
+    }
+
+    /// Spawns `player` on its level spawn point (see [`crate::spawn_player`]).
+    pub fn spawn_player(&mut self, player: PlayerId) -> SimId {
+        crate::spawn_player(self.app.world_mut(), player)
+    }
+
+    /// Runs one tick per element of `script`, each with its inputs, and returns the body
+    /// state of `id` after every tick (handy to assert on a whole trajectory).
+    pub fn run_script(&mut self, id: SimId, script: &[TickInputs]) -> Vec<BodyState> {
+        script
+            .iter()
+            .map(|inputs| {
+                self.step(1, inputs);
+                self.body(id)
+            })
+            .collect()
+    }
+
+    /// Animation state and facing of the player body `id`.
+    pub fn player_state(&mut self, id: SimId) -> (PlayerState, Facing) {
+        let mut query = self
+            .app
+            .world_mut()
+            .query::<(&SimId, &PlayerState, &Facing)>();
+        query
+            .iter(self.app.world())
+            .find(|(sim_id, _, _)| **sim_id == id)
+            .map(|(_, state, facing)| (*state, *facing))
+            .unwrap_or_else(|| panic!("no player {id:?}"))
+    }
+
+    /// Moves body `id` so its feet are at `feet` (world units) and stops it. Tests and
+    /// tools only: the simulation itself never teleports.
+    pub fn teleport(&mut self, id: SimId, feet: Vec2) {
+        let mut query = self
+            .app
+            .world_mut()
+            .query::<(&SimId, &mut Position, &mut Velocity)>();
+        for (sim_id, mut position, mut velocity) in query.iter_mut(self.app.world_mut()) {
+            if *sim_id == id {
+                position.0 = feet;
+                velocity.0 = Vec2::ZERO;
+            }
+        }
     }
 
     /// Runs `ticks` simulation ticks with the same `inputs` for each.

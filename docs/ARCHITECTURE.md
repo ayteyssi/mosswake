@@ -28,6 +28,11 @@
   et ses systèmes tournent sous `.run_if(mechanic_active("dash"))` dans `SimSet::Mechanics` ;
   le niveau liste celles qui sont actives (`rules.mechanics`, ids inconnus refusés au chargement).
   Ajouter une mécanique = nouveau module + `register_mechanic` + paramètres dans `Rules` + test headless.
+- **Joueurs** (`mw_sim::player`) : `spawn_player(world, PlayerId)` crée le corps (taille dans `Rules`)
+  sur le spawn `id % nb_spawns`. `SimSet::Input` copie `TickInputs` dans `PlayerControl` (input du
+  tick + précédent, pour détecter les fronts). Mécaniques `movement` (accélération/freinage sol et air)
+  et `jump` (hauteur variable, coyote time et jump buffer **comptés en ticks**) actives par défaut.
+  `PlayerState { Idle, Run, Jump, Fall }` + `Facing` sont mis à jour après les contacts, pour l'animation.
 - Systèmes ordonnés par `SimSet` (chaînés dans `FixedUpdate`) : `Input → ScriptPre → Mechanics → Physics → Collisions → ScriptPost → Cleanup`.
 - **Temps** : les systèmes n'utilisent jamais l'horloge ; ils avancent de `TICK_DT = 1/60 s` par tick.
   `SimHarness::new(&level)` + `step(n, &inputs)` exécute la sim tick par tick pour les tests et outils.
