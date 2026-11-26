@@ -1,5 +1,6 @@
-//! [`SimHarness`]: runs the simulation tick by tick without a window or a clock, for tests
-//! (here and in other crates) and for tools such as the MCP `simulate_level`.
+//! [`SimHarness`]: runs the simulation tick by tick without a window or a clock. Used by
+//! tests (here and in other crates), tools such as the MCP `simulate_level`, and the game
+//! server loop, which decides itself when a tick is due.
 
 use bevy::prelude::*;
 use mw_core::input::PlayerId;
@@ -7,7 +8,7 @@ use mw_level::Level;
 
 use crate::{
     load_level, Body, Contacts, Facing, PlayerState, Position, SimId, SimIds, SimLoadError,
-    SimPlugin, Tick, TickInputs, Velocity,
+    SimPlugin, Snapshot, Tick, TickInputs, Velocity,
 };
 
 /// A loaded simulation advanced explicitly with [`SimHarness::step`].
@@ -65,6 +66,16 @@ impl SimHarness {
     /// Spawns `player` on its level spawn point (see [`crate::spawn_player`]).
     pub fn spawn_player(&mut self, player: PlayerId) -> SimId {
         crate::spawn_player(self.app.world_mut(), player)
+    }
+
+    /// Despawns the bodies of `player` and returns their ids.
+    pub fn despawn_player(&mut self, player: PlayerId) -> Vec<SimId> {
+        crate::despawn_player(self.app.world_mut(), player)
+    }
+
+    /// The current world state, as sent to clients.
+    pub fn snapshot(&mut self) -> Snapshot {
+        Snapshot::capture(self.app.world_mut())
     }
 
     /// Runs one tick per element of `script`, each with its inputs, and returns the body

@@ -1,14 +1,15 @@
 # Netcode
 
-Implémenté dans `mw_net` (sans dépendance à `mw_sim`). Les parties non encore implémentées
-sont signalées par leur issue.
+Transport et protocole dans `mw_net` (sans dépendance à `mw_sim`) ; le serveur de jeu qui relie
+la simulation au réseau est dans `bins/mosswake` (voir « Serveur de jeu »). Les parties non
+encore implémentées sont signalées par leur issue.
 
 ## Vue d'ensemble
 - Transport : UDP via `renet` (canaux, fiabilité) sur `renet_netcode` (connexions, timeouts).
   Port de jeu par défaut **47800** (`DEFAULT_PORT`), découverte LAN en broadcast sur **47801**
   (`DISCOVERY_PORT`, #15).
 - Mode **non sécurisé** de netcode (pas de jeton signé ni de clé) : jeu en réseau local de confiance.
-- Serveur autoritaire, tick 60 Hz, snapshots ~30 Hz (#13), prédiction client + réconciliation,
+- Serveur autoritaire, tick 60 Hz, snapshots 30 Hz, prédiction client + réconciliation,
   interpolation ~100 ms (#14).
 - Sérialisation : `postcard` (varints compacts), via `protocol::encode` / `decode`
   (les octets en trop sont refusés).
@@ -50,7 +51,8 @@ Tout le reste (`protocol::ClientMessage`, `ServerMessage`, …) est versionné :
   (déconnexion volontaire), `TimedOut` (silence ≥ `TIMEOUT`) ou `Kicked` (exclusion, ou message
   indécodable = erreur de protocole).
 - `TIMEOUT` = **15 s**, imposé par renetcode en mode non sécurisé.
-- Inputs : `Inputs { first_tick, inputs }` porte les derniers ticks (redondance contre la perte).
+- Inputs : `Inputs { first_tick, inputs }` porte les derniers ticks (redondance contre la perte),
+  voir « Application des inputs ».
 
 ## Utilisation
 Boucle par frame, avec le temps écoulé passé explicitement (aucune lecture d'horloge interne,
@@ -69,3 +71,66 @@ client.flush()?;
 ```
 Les tests (`crates/mw_net/tests/lan.rs`) font tourner un serveur et plusieurs clients sur
 `127.0.0.1` avec un temps logique ; un timeout de 15 s y prend environ une seconde réelle.
+
+## Serveur de jeu (`bins/mosswake`)
+```sh
+mosswake server --headless --level <id> [--port 47800] [--max-players 4] [--levels-dir levels]
+mosswake host --level <id> [--port 47800] [--name Host] [--max-players 4] [--levels-dir levels]
+```
+- **`ServerSession`** (`mosswake::server`) : possède la seule vraie simulation (`mw_sim`, pilotée
+  tick par tick via `SimHarness`) et un `NetServer`. `tick()` fait, dans l'ordre : réception
+  réseau → `spawn_player` à chaque `PlayerConnected` / `despawn_player` à chaque
+  `PlayerDisconnected` → rangement des inputs reçus (un client exclu pour message indécodable
+  est retiré dès ce tick) → **un** pas de simulation → snapshot si le
+  tick est pair → envoi.
+- **Boucle temps réel** (`main.rs`) : appelle `tick()` à 60 Hz d'horloge murale. C'est le seul
+  endroit qui lit l'horloge, et seulement pour cadencer ; après un gel de plus de 250 ms
+  (débogueur, mise en veille), elle reprend au lieu de rattraper des centaines de ticks.
+- **Mode host** (`HostSession`, `mosswake::host`) : `ServerSession` + le client du joueur hôte
+  dans le même process, pompés par la même boucle (pas de thread). Le client local passe par
+  l'UDP en loopback comme un client distant : même code, aucun avantage pour l'hôte. Tant que le
+  rendu (#10) n'existe pas, `mosswake host` fait tourner la session sans afficher et le joueur
+  local reste immobile.
+- Le niveau est chargé depuis `levels/<id>/` et validé (`LevelBundle::validate`) avant démarrage.
+  Les clients distants doivent, pour l'instant, avoir le même niveau en local ; l'envoi du niveau
+  à la connexion relève de #16.
+
+### Ticks
+- `Tick` = nombre de ticks simulés. Un snapshot de tick `N` est l'état **après** `N` ticks ; le
+  prochain tick simulé par le serveur est alors `N`.
+- Un input « pour le tick `T` » est appliqué pendant le pas qui fait passer `Tick` de `T` à `T + 1`.
+
+### Application des inputs (`InputBuffer`)
+- Le serveur range les inputs par tick. Un input pour un tick déjà simulé arrive **trop tard** et
+  est ignoré ; un input plus de `MAX_INPUT_LEAD_TICKS` (120 = 2 s) en avance est ignoré (borne la
+  mémoire qu'un client peut faire consommer).
+- Un tick sans input reprend le **dernier input reçu** : un paquet perdu ne fait pas s'arrêter le
+  joueur. Les copies redondantes sont sans effet.
+
+### Envoi des inputs côté client (`InputSender`)
+- Chaque message répète les `INPUT_REDUNDANCY` (4) derniers inputs.
+- Le client vise `tick du dernier snapshot + INPUT_LEAD_TICKS` (3 ticks = 50 ms), puis +1 par
+  tick. **Sans cette avance, la redondance ne sert à rien** : les copies arriveraient toujours après
+  leur tick. Avec elle, jusqu'à 2 messages perdus d'affilée ne coûtent rien (testé avec 2 messages
+  sur 3 perdus). Prix : 50 ms de délai sur les réactions du joueur, que la prédiction client (#14)
+  masquera ; #14 remplacera aussi cette estimation par une vraie synchronisation qui tient compte
+  de la latence.
+- Si le client se retrouve plus de `RESYNC_AHEAD_TICKS` (30) ticks en avance sur le dernier snapshot
+  (serveur figé, horloges qui dérivent), il se recale : sinon il dériverait jusqu'à ce que le serveur
+  ignore tous ses inputs comme trop en avance.
+
+### Snapshot (`mw_sim::Snapshot`)
+Charge utile de `ServerMessage::Snapshot { tick, data }` : `data` = `mw_sim::Snapshot` encodé avec
+`protocol::encode` (postcard). Envoyé tous les `SNAPSHOT_INTERVAL_TICKS` (2) ticks, soit 30 Hz.
+
+| Champ | Contenu |
+|---|---|
+| `tick` | égal au `tick` du message |
+| `bodies[]` | tous les corps, **triés par `SimId`** |
+| `bodies[].id`, `position`, `velocity`, `contacts` | état physique (pieds, unités monde, y vers le haut) |
+| `bodies[].player` | si c'est un joueur : `player` (`PlayerId`), `state` et `facing` (animation), `control` (inputs et minuteurs de saut, pour que le client re-simule son joueur à l'identique, #14) |
+
+Un client trouve son propre corps avec `snapshot.player(mon_player_id)`. L'encodage du snapshot
+fait **partie du protocole** : un test (`bins/mosswake/tests/server.rs`) fige ses octets, et toute
+modification des types de `mw_sim::snapshot` (ou de ce qu'ils contiennent : `Contacts`,
+`PlayerControl`, `PlayerState`, `Facing`) incrémente `PROTOCOL_VERSION`.

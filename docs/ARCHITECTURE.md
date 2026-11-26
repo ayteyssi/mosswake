@@ -74,6 +74,8 @@
 - Client → serveur : inputs des derniers ticks (redondance contre la perte).
 - Serveur → client : snapshots d'état (non fiable, ~20-30 Hz), événements (fiable), niveau + scripts à la connexion (fiable, chunké).
 - Client : prédiction du joueur local (même code `mw_sim`) + réconciliation ; interpolation des entités distantes.
+- Serveur de jeu : `bins/mosswake` relie `mw_sim` et `mw_net` (`ServerSession`, `HostSession` pour le
+  mode host) ; `mw_net` reste indépendant de la simulation. Snapshot = `mw_sim::Snapshot`.
 - Découverte LAN : broadcast UDP sur un port dédié. Voir `docs/NETCODE.md`.
 
 ## Rendu (`mw_render`)
