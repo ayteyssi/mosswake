@@ -90,6 +90,12 @@ version = "0.1.0"
 [[package]]
 name = "mw_level"
 version = "0.1.0"
+dependencies = [
+ "serde",
+ "serde_json",
+ "tempfile",
+ "thiserror",
+]
 
 [[package]]
 name = "mw_net"
