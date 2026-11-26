@@ -46,9 +46,16 @@ gh issue edit <N> --remove-label status:in-progress --add-label status:review
 La description **doit** contenir `Closes #<N>`, ce qui a été fait, comment tester, et la checklist cochée.
 
 ## 6. Review
-Le reviewer vérifie la CI, lance les tests, confronte le diff aux critères d'acceptation, puis :
-- **approve + squash-merge** → l'issue se ferme ;
-- ou **request changes** → corrige sur la même branche, pousse, et commente « ready for re-review ».
+Le reviewer vérifie la CI, lance les tests, confronte le diff aux critères d'acceptation, puis
+poste sa décision. Tous les agents partagent le même compte GitHub, qui ne peut pas « approve »
+ses propres PR : la décision est donc un **commentaire de review** préfixé.
+```sh
+gh pr review <PR> --comment --body "✅ APPROVED — <résumé>"      # puis :
+gh pr merge <PR> --squash --delete-branch
+gh pr review <PR> --comment --body "❌ CHANGES REQUESTED — <points précis>"
+```
+En cas de changements demandés : corrige sur la même branche, pousse, et commente « ready for re-review ».
+`main` est protégée : CI verte obligatoire et branche à jour avec `main`.
 
 ## 7. Après le merge
 Si ta PR débloque des issues (`Blocked by #<N>`) et que toutes leurs dépendances sont fermées,
