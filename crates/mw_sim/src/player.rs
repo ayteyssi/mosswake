@@ -5,6 +5,7 @@
 
 use bevy::prelude::*;
 use mw_core::input::{buttons, PlayerId, PlayerInput};
+use serde::{Deserialize, Serialize};
 
 use crate::{
     mechanic_active, tiles_to_world, Body, Contacts, LoadedLevel, Position, RegisterMechanic,
@@ -22,7 +23,8 @@ pub const JUMP: &str = "jump";
 pub struct Player(pub PlayerId);
 
 /// Input of this tick and the previous one (for press / release edges) and jump timers.
-#[derive(Component, Debug, Clone, Copy, PartialEq, Eq, Default)]
+/// Part of [`crate::Snapshot`]: a client needs it to re-simulate its player exactly.
+#[derive(Component, Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
 pub struct PlayerControl {
     pub input: PlayerInput,
     pub previous: PlayerInput,
@@ -42,7 +44,7 @@ impl PlayerControl {
 }
 
 /// What the player is doing, for animation. Updated after collisions every tick.
-#[derive(Component, Debug, Clone, Copy, PartialEq, Eq, Default)]
+#[derive(Component, Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
 pub enum PlayerState {
     #[default]
     Idle,
@@ -54,7 +56,7 @@ pub enum PlayerState {
 }
 
 /// Which way the player looks; kept when the input is released.
-#[derive(Component, Debug, Clone, Copy, PartialEq, Eq, Default)]
+#[derive(Component, Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
 pub enum Facing {
     Left,
     #[default]
@@ -103,6 +105,21 @@ pub fn spawn_player(world: &mut World, player: PlayerId) -> SimId {
     let id = world.resource_mut::<SimIds>().allocate();
     world.spawn((id, Player(player), body, Position(feet)));
     id
+}
+
+/// Despawns every body of `player` (on disconnect) and returns their ids, by id.
+pub fn despawn_player(world: &mut World, player: PlayerId) -> Vec<SimId> {
+    let mut query = world.query::<(Entity, &SimId, &Player)>();
+    let mut found: Vec<(SimId, Entity)> = query
+        .iter(world)
+        .filter(|(_, _, p)| p.0 == player)
+        .map(|(entity, id, _)| (*id, entity))
+        .collect();
+    found.sort_by_key(|(id, _)| *id);
+    for (_, entity) in &found {
+        world.despawn(*entity);
+    }
+    found.into_iter().map(|(id, _)| id).collect()
 }
 
 fn read_inputs(inputs: Res<TickInputs>, mut players: Query<(&Player, &mut PlayerControl)>) {
