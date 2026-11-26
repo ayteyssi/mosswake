@@ -1,0 +1,344 @@
+{
+  "version": 1,
+  "sprites": {
+    "blue_flower_1": {
+      "frame_size": {
+        "w": 768,
+        "h": 768
+      },
+      "pivot": {
+        "x": 720,
+        "y": 757
+      },
+      "pixels_per_tile": 160.0,
+      "animations": {
+        "idle": {
+          "path": "plants/blue_flower_1",
+          "frames": 60,
+          "fps": 30.0,
+          "looping": true
+        }
+      }
+    },
+    "blue_flower_2": {
+      "frame_size": {
+        "w": 768,
+        "h": 768
+      },
+      "pivot": {
+        "x": 721,
+        "y": 747
+      },
+      "pixels_per_tile": 160.0,
+      "animations": {
+        "idle": {
+          "path": "plants/blue_flower_2",
+          "frames": 60,
+          "fps": 30.0,
+          "looping": true
+        }
+      }
+    },
+    "blue_wizard": {
+      "frame_size": {
+        "w": 512,
+        "h": 512
+      },
+      "pivot": {
+        "x": 255,
+        "y": 401
+      },
+      "pixels_per_tile": 140.0,
+      "hitbox": {
+        "x": 195,
+        "y": 150,
+        "w": 120,
+        "h": 251
+      },
+      "animations": {
+        "dash2": {
+          "path": "characters/blue_wizard/dash2",
+          "frames": 16,
+          "fps": 30.0,
+          "looping": false
+        },
+        "dash3": {
+          "path": "characters/blue_wizard/dash3",
+          "frames": 16,
+          "fps": 30.0,
+          "looping": false
+        },
+        "dash_effect": {
+          "path": "characters/blue_wizard/dash_effect",
+          "frames": 16,
+          "fps": 30.0,
+          "looping": false
+        },
+        "idle": {
+          "path": "characters/blue_wizard/idle",
+          "frames": 20,
+          "fps": 12.0,
+          "looping": true
+        },
+        "jump": {
+          "path": "characters/blue_wizard/jump",
+          "frames": 8,
+          "fps": 12.0,
+          "looping": false
+        },
+        "walk": {
+          "path": "characters/blue_wizard/walk",
+          "frames": 20,
+          "fps": 24.0,
+          "looping": true
+        }
+      }
+    },
+    "plant_1": {
+      "frame_size": {
+        "w": 512,
+        "h": 512
+      },
+      "pivot": {
+        "x": 248,
+        "y": 423
+      },
+      "pixels_per_tile": 160.0,
+      "animations": {
+        "idle": {
+          "path": "plants/plant_1",
+          "frames": 90,
+          "fps": 30.0,
+          "looping": true
+        }
+      }
+    },
+    "plant_2": {
+      "frame_size": {
+        "w": 512,
+        "h": 512
+      },
+      "pivot": {
+        "x": 234,
+        "y": 426
+      },
+      "pixels_per_tile": 160.0,
+      "animations": {
+        "idle": {
+          "path": "plants/plant_2",
+          "frames": 90,
+          "fps": 30.0,
+          "looping": true
+        }
+      }
+    },
+    "plant_3": {
+      "frame_size": {
+        "w": 512,
+        "h": 512
+      },
+      "pivot": {
+        "x": 229,
+        "y": 440
+      },
+      "pixels_per_tile": 160.0,
+      "animations": {
+        "idle": {
+          "path": "plants/plant_3",
+          "frames": 90,
+          "fps": 30.0,
+          "looping": true
+        }
+      }
+    },
+    "plant_4": {
+      "frame_size": {
+        "w": 512,
+        "h": 512
+      },
+      "pivot": {
+        "x": 257,
+        "y": 478
+      },
+      "pixels_per_tile": 160.0,
+      "animations": {
+        "idle": {
+          "path": "plants/plant_4",
+          "frames": 60,
+          "fps": 30.0,
+          "looping": true
+        }
+      }
+    },
+    "plant_5": {
+      "frame_size": {
+        "w": 512,
+        "h": 512
+      },
+      "pivot": {
+        "x": 256,
+        "y": 473
+      },
+      "pixels_per_tile": 160.0,
+      "animations": {
+        "idle": {
+          "path": "plants/plant_5",
+          "frames": 60,
+          "fps": 30.0,
+          "looping": true
+        }
+      }
+    },
+    "plant_6": {
+      "frame_size": {
+        "w": 512,
+        "h": 512
+      },
+      "pivot": {
+        "x": 297,
+        "y": 469
+      },
+      "pixels_per_tile": 160.0,
+      "animations": {
+        "idle": {
+          "path": "plants/plant_6",
+          "frames": 60,
+          "fps": 30.0,
+          "looping": true
+        }
+      }
+    },
+    "plant_7": {
+      "frame_size": {
+        "w": 512,
+        "h": 512
+      },
+      "pivot": {
+        "x": 229,
+        "y": 442
+      },
+      "pixels_per_tile": 160.0,
+      "animations": {
+        "idle": {
+          "path": "plants/plant_7",
+          "frames": 60,
+          "fps": 30.0,
+          "looping": true
+        }
+      }
+    },
+    "plant_8_poison": {
+      "frame_size": {
+        "w": 512,
+        "h": 512
+      },
+      "pivot": {
+        "x": 238,
+        "y": 58
+      },
+      "pixels_per_tile": 160.0,
+      "animations": {
+        "idle": {
+          "path": "plants/plant_8_poison",
+          "frames": 30,
+          "fps": 24.0,
+          "looping": true
+        }
+      }
+    },
+    "plant_jump": {
+      "frame_size": {
+        "w": 512,
+        "h": 512
+      },
+      "pivot": {
+        "x": 255,
+        "y": 360
+      },
+      "pixels_per_tile": 160.0,
+      "animations": {
+        "bounce": {
+          "path": "plants/plant_jump",
+          "frames": 20,
+          "fps": 30.0,
+          "looping": false
+        },
+        "idle": {
+          "path": "plants/plant_jump2",
+          "frames": 20,
+          "fps": 24.0,
+          "looping": true
+        }
+      }
+    },
+    "plant_wind_1": {
+      "frame_size": {
+        "w": 512,
+        "h": 512
+      },
+      "pivot": {
+        "x": 358,
+        "y": 434
+      },
+      "pixels_per_tile": 160.0,
+      "animations": {
+        "idle": {
+          "path": "plants/plant_wind_1",
+          "frames": 30,
+          "fps": 24.0,
+          "looping": true
+        }
+      }
+    },
+    "slime_green": {
+      "frame_size": {
+        "w": 376,
+        "h": 256
+      },
+      "pivot": {
+        "x": 188,
+        "y": 228
+      },
+      "pixels_per_tile": 200.0,
+      "hitbox": {
+        "x": 48,
+        "y": 50,
+        "w": 280,
+        "h": 178
+      },
+      "animations": {
+        "idle": {
+          "path": "enemies/slime_green",
+          "frames": 30,
+          "fps": 24.0,
+          "looping": true
+        }
+      }
+    },
+    "slime_orange": {
+      "frame_size": {
+        "w": 510,
+        "h": 410
+      },
+      "pivot": {
+        "x": 262,
+        "y": 329
+      },
+      "pixels_per_tile": 160.0,
+      "hitbox": {
+        "x": 140,
+        "y": 110,
+        "w": 245,
+        "h": 219
+      },
+      "animations": {
+        "idle": {
+          "path": "enemies/slime_orange",
+          "frames": 30,
+          "fps": 24.0,
+          "looping": true
+        }
+      }
+    }
+  }
+}
