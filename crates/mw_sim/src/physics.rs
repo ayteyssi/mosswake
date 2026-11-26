@@ -71,6 +71,7 @@ pub(crate) fn apply_gravity(
 }
 
 pub(crate) fn move_and_collide(
+    rules: Res<Rules>,
     grid: Option<Res<CollisionGrid>>,
     mut bodies: Query<(&Body, &mut Position, &mut Velocity)>,
 ) {
@@ -79,7 +80,7 @@ pub(crate) fn move_and_collide(
     };
     for (body, mut position, mut velocity) in &mut bodies {
         let aabb = Aabb::from_feet(position.0, body.size);
-        let result = grid.sweep(aabb, velocity.0 * TICK_DT);
+        let result = grid.sweep_with_gravity(aabb, velocity.0 * TICK_DT, rules.gravity_dir());
         position.0 = result.aabb.feet();
         if result.blocked_x {
             velocity.0.x = 0.0;
@@ -107,11 +108,12 @@ pub(crate) fn update_contacts(
                 max: aabb.max + Vec2::new(dx, dy),
             })
         };
-        let below = touches(0.0, -PROBE);
-        let above = touches(0.0, PROBE);
+        let supported = grid
+            .sweep_with_gravity(aabb, Vec2::new(0.0, dir * PROBE), dir)
+            .blocked_y;
         let new = Contacts {
-            grounded: if dir < 0.0 { below } else { above },
-            on_ceiling: if dir < 0.0 { above } else { below },
+            grounded: supported,
+            on_ceiling: touches(0.0, -dir * PROBE),
             on_wall_left: touches(-PROBE, 0.0),
             on_wall_right: touches(PROBE, 0.0),
         };
