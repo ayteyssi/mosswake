@@ -1,13 +1,16 @@
 //! [`ServerSession`]: the authoritative game server, the simulation driven by the network.
 
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 use std::net::SocketAddr;
 use std::time::Duration;
 
 use anyhow::{Context, Result};
 use mw_core::input::PlayerId;
-use mw_level::Level;
-use mw_net::{protocol, ClientMessage, NetServer, NetServerConfig, ServerMessage, ServerNetEvent};
+use mw_level::LevelBundle;
+use mw_net::transfer::chunks;
+use mw_net::{
+    protocol, ClientMessage, LevelOffer, NetServer, NetServerConfig, ServerMessage, ServerNetEvent,
+};
 use mw_sim::{SimHarness, Snapshot, TickInputs, TICK_HZ};
 
 use crate::input_buffer::InputBuffer;
@@ -26,8 +29,9 @@ pub struct ServerConfig {
     pub max_players: u8,
 }
 
-/// Runs the only real simulation of a session: spawns a player per connection, applies
-/// their inputs tick by tick and broadcasts [`Snapshot`]s.
+/// Runs the only real simulation of a session: sends the level to each connecting client,
+/// spawns its player once the client has loaded it, applies inputs tick by tick and
+/// broadcasts [`Snapshot`]s.
 ///
 /// Call [`ServerSession::tick`] once per simulation tick ([`TICK`]); the caller owns the
 /// timing (real-time loop in the game, as fast as possible in tests).
@@ -35,23 +39,84 @@ pub struct ServerSession {
     net: NetServer,
     sim: SimHarness,
     inputs: BTreeMap<PlayerId, InputBuffer>,
+    /// The current level as sent to clients, and its offer.
+    package: Vec<u8>,
+    offer: LevelOffer,
+    /// Connected players still loading the current level (not spawned yet).
+    loading: BTreeSet<PlayerId>,
+    /// Level packages sent (requests served), for tests and logs.
+    uploads: u32,
 }
 
 impl ServerSession {
-    /// Loads `level` into a new simulation and starts listening.
-    pub fn new(level: &Level, config: ServerConfig) -> Result<Self> {
-        let sim = SimHarness::new(level)
-            .with_context(|| format!("cannot simulate level `{}`", level.id))?;
+    /// Loads `bundle` into a new simulation and starts listening.
+    pub fn new(bundle: &LevelBundle, config: ServerConfig) -> Result<Self> {
+        let (sim, package) = prepare(bundle)?;
         let net = NetServer::bind(NetServerConfig {
             bind: config.bind,
             max_players: config.max_players,
         })
         .with_context(|| format!("cannot listen on {}", config.bind))?;
+        let offer = LevelOffer::new(1, &package);
         Ok(Self {
             net,
             sim,
             inputs: BTreeMap::new(),
+            package,
+            offer,
+            loading: BTreeSet::new(),
+            uploads: 0,
         })
+    }
+
+    /// Switches every client to `bundle`: a fresh simulation, and a new offer to everyone.
+    /// Players respawn as their clients finish loading it.
+    pub fn change_level(&mut self, bundle: &LevelBundle) -> Result<()> {
+        let (sim, package) = prepare(bundle)?;
+        self.sim = sim;
+        self.offer = LevelOffer::new(self.offer.transfer + 1, &package);
+        self.package = package;
+        self.inputs.clear();
+        self.loading = self.net.players().iter().map(|p| p.player).collect();
+        self.net.broadcast(&ServerMessage::LevelOffer(self.offer));
+        self.net.flush();
+        Ok(())
+    }
+
+    /// The offer of the current level.
+    pub fn level_offer(&self) -> LevelOffer {
+        self.offer
+    }
+
+    /// Level packages sent so far (clients with a cached copy download nothing).
+    pub fn uploads(&self) -> u32 {
+        self.uploads
+    }
+
+    fn on_level_message(&mut self, player: PlayerId, message: &ClientMessage) {
+        match *message {
+            ClientMessage::LevelRequest { transfer } if transfer == self.offer.transfer => {
+                for (index, data) in chunks(&self.package).into_iter().enumerate() {
+                    self.net.send(
+                        player,
+                        &ServerMessage::LevelChunk {
+                            transfer,
+                            index: index as u32,
+                            data: data.to_vec(),
+                        },
+                    );
+                }
+                self.uploads += 1;
+            }
+            ClientMessage::LevelReady { transfer }
+                if transfer == self.offer.transfer && self.loading.remove(&player) =>
+            {
+                self.sim.spawn_player(player);
+                self.inputs.insert(player, InputBuffer::default());
+            }
+            // Stale transfer numbers (an older level) and duplicates are ignored.
+            _ => {}
+        }
     }
 
     /// Address the server listens on.
@@ -74,6 +139,9 @@ impl ServerSession {
                     if let Some(buffer) = self.inputs.get_mut(&player) {
                         buffer.insert(first_tick, &inputs, current);
                     }
+                }
+                level @ (ClientMessage::LevelRequest { .. } | ClientMessage::LevelReady { .. }) => {
+                    self.on_level_message(player, &level)
                 }
             }
         }
@@ -104,12 +172,16 @@ impl ServerSession {
         for event in self.net.events().collect::<Vec<_>>() {
             match &event {
                 ServerNetEvent::PlayerConnected(info) => {
-                    self.sim.spawn_player(info.player);
-                    self.inputs.insert(info.player, InputBuffer::default());
+                    // Spawned once the client has the level (`LevelReady`).
+                    self.loading.insert(info.player);
+                    self.net
+                        .send(info.player, &ServerMessage::LevelOffer(self.offer));
                 }
                 ServerNetEvent::PlayerDisconnected { player, .. } => {
-                    self.sim.despawn_player(*player);
-                    self.inputs.remove(player);
+                    if self.inputs.remove(player).is_some() {
+                        self.sim.despawn_player(*player);
+                    }
+                    self.loading.remove(player);
                 }
                 ServerNetEvent::ClientRejected { .. } => {}
             }
@@ -131,6 +203,23 @@ impl ServerSession {
     pub fn shutdown(&mut self) {
         self.net.shutdown();
     }
+}
+
+/// A simulation of `bundle` and its package, refusing levels too large to send.
+fn prepare(bundle: &LevelBundle) -> Result<(SimHarness, Vec<u8>)> {
+    let id = &bundle.level.id;
+    let sim =
+        SimHarness::new(&bundle.level).with_context(|| format!("cannot simulate level `{id}`"))?;
+    let package = bundle
+        .to_package()
+        .with_context(|| format!("cannot package level `{id}`"))?;
+    if package.len() > mw_net::transfer::MAX_PACKAGE_BYTES {
+        anyhow::bail!(
+            "level `{id}` is too large to send ({} bytes)",
+            package.len()
+        );
+    }
+    Ok((sim, package))
 }
 
 /// Decodes the payload of a [`ServerMessage::Snapshot`].

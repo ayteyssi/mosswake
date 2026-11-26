@@ -20,7 +20,7 @@ Mêmes identifiants dans les deux sens ; chaque message connaît son canal (`mes
 | Canal | Garantie | Client → serveur | Serveur → client |
 |---|---|---|---|
 | `Unreliable` (0) | aucune, le suivant remplace | `Inputs` | `Snapshot` |
-| `Reliable` (1) | fiable et ordonné | (contrôle, à venir) | réponse de handshake, `Roster`, `PlayerJoined`, `PlayerLeft` |
+| `Reliable` (1) | fiable et ordonné | `LevelRequest`, `LevelReady` | réponse de handshake, `Roster`, `PlayerJoined`, `PlayerLeft`, `LevelOffer`, `LevelChunk` |
 
 ## Connexion et versions
 Problème : pour refuser proprement un client d'une autre version, il faut lui envoyer un message
@@ -53,6 +53,31 @@ Tout le reste (`protocol::ClientMessage`, `ServerMessage`, …) est versionné :
 - `TIMEOUT` = **15 s**, imposé par renetcode en mode non sécurisé.
 - Inputs : `Inputs { first_tick, inputs }` porte les derniers ticks (redondance contre la perte),
   voir « Application des inputs ».
+
+## Transfert du niveau (#16)
+Les clients n'ont pas forcément le niveau (niveaux créés par IA) : le serveur l'envoie.
+1. **Paquet** : `LevelBundle::to_package()` (`mw_level`) = JSON canonique `{level, scripts}`. Un même
+   niveau donne les mêmes octets sur tout serveur, donc le même hash. Au déballage, les chemins
+   de scripts sont revalidés (un serveur ne peut pas faire écrire hors de `scripts/`) et le schéma
+   est migré.
+2. **Offre** (fiable) : à chaque connexion, et à chaque changement de niveau pour tous,
+   `LevelOffer { transfer, hash (SHA-256), size, chunks }`. `transfer` augmente à chaque niveau :
+   les messages qui portent un ancien numéro sont ignorés.
+3. Le client (`mosswake::level_sync::LevelSync`) regarde son **cache** (`LevelCache`, optionnel,
+   `<dir>/<hash>.mwlevel`, relu et revérifié) :
+   - présent : il charge et répond `LevelReady` (aucun téléchargement) ;
+   - absent : `LevelRequest`, le serveur envoie `LevelChunk { transfer, index, data }` (16 Kio
+     chacun, fiables). `mw_net::Assembler` reconstitue dans n'importe quel ordre, refuse les offres
+     incohérentes ou > **4 Mio** et vérifie le **hash**. Le client met en cache, charge, valide le
+     niveau, puis répond `LevelReady`.
+4. Le serveur ne fait apparaître le joueur **qu'à réception de `LevelReady`**. Avant cela, le
+   joueur est connecté mais absent du monde, et le client ignore les snapshots.
+5. `ServerSession::change_level(bundle)` : nouvelle simulation, nouvelle offre à tous ; chacun
+   réapparaît en ayant chargé le nouveau niveau.
+
+Les scripts sont transmis avec le niveau mais **jamais exécutés côté client** (ils tournent sur
+le serveur). Le mode `host` passe par le même chemin : son client local télécharge le niveau en
+loopback comme un joueur distant.
 
 ## Utilisation
 Boucle par frame, avec le temps écoulé passé explicitement (aucune lecture d'horloge interne,

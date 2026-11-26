@@ -7,15 +7,16 @@ use std::time::Duration;
 
 use mosswake::host::HostSession;
 use mosswake::input_sender::{InputSender, INPUT_LEAD_TICKS};
+use mosswake::level_sync::LevelSync;
 use mosswake::server::{decode_snapshot, ServerConfig, ServerSession, TICK};
 use mw_core::input::{PlayerId, PlayerInput};
-use mw_level::Level;
+use mw_level::LevelBundle;
 use mw_net::{protocol, ClientState, NetClient, ServerMessage};
 use mw_sim::{
     BodySnapshot, Contacts, Facing, PlayerControl, PlayerSnapshot, PlayerState, SimId, Snapshot,
 };
 
-fn tutorial() -> Level {
+fn tutorial() -> LevelBundle {
     let levels = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../levels");
     mosswake::load_level(&levels, "tutorial").expect("tutorial loads")
 }
@@ -41,6 +42,7 @@ fn right() -> PlayerInput {
 /// A remote client as the game will run it: network + input sender + newest snapshot.
 struct Remote {
     client: NetClient,
+    level: LevelSync,
     sender: InputSender,
     latest: Option<Snapshot>,
     snapshots: Vec<u64>,
@@ -53,6 +55,7 @@ impl Remote {
     fn join(server: &ServerSession, name: &str) -> Self {
         Self {
             client: NetClient::connect(server.local_addr(), name).expect("client starts"),
+            level: LevelSync::default(),
             sender: InputSender::default(),
             latest: None,
             snapshots: Vec::new(),
@@ -64,6 +67,10 @@ impl Remote {
     fn frame(&mut self, input: PlayerInput) {
         self.client.update(TICK).unwrap();
         for message in self.client.receive() {
+            let outcome = self.level.handle(&message).expect("usable level");
+            for reply in &outcome.replies {
+                self.client.send(reply);
+            }
             if let ServerMessage::Snapshot { tick, data } = message {
                 let snapshot = decode_snapshot(&data).expect("valid snapshot");
                 assert_eq!(snapshot.tick, tick, "header and payload agree");
@@ -331,13 +338,14 @@ fn snapshot_encoding_is_pinned_to_the_protocol_version() {
     let bytes = protocol::encode(&snapshot).unwrap();
     assert_eq!(
         (mw_net::PROTOCOL_VERSION, bytes.as_slice()),
-        (1, EXPECTED_V1.as_slice()),
+        // v2 (#16) added level-transfer messages; the snapshot encoding itself is unchanged.
+        (2, EXPECTED_SNAPSHOT.as_slice()),
         "snapshot encoding changed: bump PROTOCOL_VERSION"
     );
     assert_eq!(decode_snapshot(&bytes).unwrap(), snapshot);
 }
 
-const EXPECTED_V1: [u8; 37] = [
+const EXPECTED_SNAPSHOT: [u8; 37] = [
     172, 2, 1, 2, 0, 0, 192, 63, 0, 0, 0, 66, 0, 0, 0, 0, 0, 0, 128, 191, 1, 0, 0, 0, 1, 1, 1, 0,
     127, 0, 0, 0, 0, 0, 6, 0, 0,
 ];

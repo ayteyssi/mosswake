@@ -107,8 +107,9 @@ fn run_at_tick_rate(mut tick: impl FnMut() -> Result<()>) -> Result<()> {
 
 fn server(args: &[String]) -> Result<()> {
     let options = parse_options(args, false)?;
-    let level = load_level(&options.levels_dir, &options.level)?;
-    let mut session = ServerSession::new(&level, config(&options))?;
+    let bundle = load_level(&options.levels_dir, &options.level)?;
+    let level = &bundle.level;
+    let mut session = ServerSession::new(&bundle, config(&options))?;
     println!(
         "mosswake server: level `{}` on {} (protocol v{}, up to {} players)",
         level.id,
@@ -124,8 +125,9 @@ fn server(args: &[String]) -> Result<()> {
 
 fn host(args: &[String]) -> Result<()> {
     let options = parse_options(args, true)?;
-    let level = load_level(&options.levels_dir, &options.level)?;
-    let mut session = HostSession::new(&level, config(&options), &options.name)?;
+    let bundle = load_level(&options.levels_dir, &options.level)?;
+    let level = &bundle.level;
+    let mut session = HostSession::new(&bundle, config(&options), &options.name)?;
     println!(
         "mosswake host: level `{}` on {} — rendering is not implemented yet (#10), \
          the local player stands still",
