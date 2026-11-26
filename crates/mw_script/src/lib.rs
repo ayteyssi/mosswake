@@ -1,14 +1,17 @@
 //! Rhai scripting integration: sandbox, hooks and gameplay API.
 //!
-//! See `docs/ARCHITECTURE.md` for this crate's responsibilities and boundaries.
+//! [`ScriptHost`] compiles a level's `scripts/*.rhai` in a sandboxed engine (no file,
+//! network, time or `eval`; bounded operations, recursion and data sizes), keeps a persistent
+//! `state` object, and calls optional hooks (`on_level_start`, `on_tick`…). Scripts do not
+//! touch the simulation: they emit [`ScriptCommand`]s that the simulation applies (#19).
+//! Errors are [`ScriptError`]s with file, line and kind; nothing here panics on bad scripts.
+//!
+//! The functions exposed to scripts are documented in `docs/SCRIPTING_API.md`.
 
-/// Crate name, used in logs.
-pub const CRATE: &str = "mw_script";
+mod command;
+mod error;
+mod host;
 
-#[cfg(test)]
-mod tests {
-    #[test]
-    fn crate_name() {
-        assert_eq!(super::CRATE, "mw_script");
-    }
-}
+pub use command::{dynamic_to_json, ScriptCommand, DEFAULT_HUD_SECONDS};
+pub use error::{ScriptError, ScriptErrorKind};
+pub use host::{HookOutcome, Limits, ScriptHost, STATE_VAR};

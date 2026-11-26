@@ -1866,6 +1866,22 @@
       "collision": false,
       "anchor": "bottom"
     },
+    "thorns_tile": {
+      "sheet": "decorations_and_hazards",
+      "rect": {
+        "x": 3278,
+        "y": 1939,
+        "w": 512,
+        "h": 316
+      },
+      "kind": "hazard",
+      "size": {
+        "w": 1,
+        "h": 1
+      },
+      "collision": false,
+      "anchor": "bottom"
+    },
     "trunk_a": {
       "sheet": "decorations_and_hazards",
       "rect": {

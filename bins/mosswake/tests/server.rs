@@ -318,6 +318,7 @@ fn snapshot_encoding_is_pinned_to_the_protocol_version() {
                 player: PlayerId(1),
                 state: PlayerState::Run,
                 facing: Facing::Left,
+                mobility: mw_sim::mechanics::MobilityState::default(),
                 control: PlayerControl {
                     input: right(),
                     previous: PlayerInput::default(),
@@ -331,13 +332,13 @@ fn snapshot_encoding_is_pinned_to_the_protocol_version() {
     let bytes = protocol::encode(&snapshot).unwrap();
     assert_eq!(
         (mw_net::PROTOCOL_VERSION, bytes.as_slice()),
-        (1, EXPECTED_V1.as_slice()),
+        (2, EXPECTED_V2.as_slice()),
         "snapshot encoding changed: bump PROTOCOL_VERSION"
     );
     assert_eq!(decode_snapshot(&bytes).unwrap(), snapshot);
 }
 
-const EXPECTED_V1: [u8; 37] = [
+const EXPECTED_V2: [u8; 44] = [
     172, 2, 1, 2, 0, 0, 192, 63, 0, 0, 0, 66, 0, 0, 0, 0, 0, 0, 128, 191, 1, 0, 0, 0, 1, 1, 1, 0,
-    127, 0, 0, 0, 0, 0, 6, 0, 0,
+    127, 0, 0, 0, 0, 0, 6, 0, 0, 0, 0, 1, 1, 0, 0, 0,
 ];

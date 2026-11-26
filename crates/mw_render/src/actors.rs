@@ -2,7 +2,8 @@
 //! drawn at a position interpolated between the last two simulation ticks.
 
 use bevy::prelude::*;
-use mw_sim::{Facing, LoadedLevel, Player, PlayerState, Position};
+use mw_sim::mechanics::MobilityState;
+use mw_sim::{Facing, LoadedLevel, Player, PlayerState, Position, Rules};
 
 use crate::level::z;
 use crate::sprites::{Animator, SpriteLibrary};
@@ -15,8 +16,11 @@ pub const PLAYER_SPRITE: &str = "blue_wizard";
 #[derive(Component, Debug, Clone, Copy)]
 pub struct PrevPosition(pub Vec2);
 
-/// Animation playing for a player state.
-pub fn player_animation(state: PlayerState) -> &'static str {
+/// Animation playing for a player state (a dash overrides everything).
+pub fn player_animation(state: PlayerState, dashing: bool) -> &'static str {
+    if dashing {
+        return "dash2";
+    }
     match state {
         PlayerState::Idle => "idle",
         PlayerState::Run => "walk",
@@ -48,14 +52,26 @@ pub(crate) fn attach_player_visuals(
     }
 }
 
+/// What `animate_players` reads and writes on each player.
+type PlayerVisualData = (
+    &'static PlayerState,
+    &'static Facing,
+    Option<&'static MobilityState>,
+    &'static mut Animator,
+    &'static mut Sprite,
+);
+
 pub(crate) fn animate_players(
     server: Res<AssetServer>,
+    rules: Res<Rules>,
     mut library: ResMut<SpriteLibrary>,
     mut scales: ResMut<TextureScales>,
-    mut players: Query<(&PlayerState, &Facing, &mut Animator, &mut Sprite), With<Player>>,
+    mut players: Query<PlayerVisualData, With<Player>>,
 ) {
-    for (state, facing, mut animator, mut sprite) in &mut players {
-        animator.play(&mut library, &server, &mut scales, player_animation(*state));
+    for (state, facing, mobility, mut animator, mut sprite) in &mut players {
+        let dashing = mobility.is_some_and(|m| m.is_dashing(&rules));
+        let clip = player_animation(*state, dashing);
+        animator.play(&mut library, &server, &mut scales, clip);
         // The wizard art faces right.
         let flip = *facing == Facing::Left;
         if sprite.flip_x != flip {
@@ -100,10 +116,15 @@ mod tests {
             PlayerState::Jump,
             PlayerState::Fall,
         ] {
-            assert!(
-                wizard.animations.contains_key(player_animation(state)),
-                "{state:?}"
-            );
+            for dashing in [false, true] {
+                let clip = player_animation(state, dashing);
+                assert!(wizard.animations.contains_key(clip), "{state:?} {clip}");
+            }
         }
+        assert_eq!(
+            player_animation(PlayerState::Run, true),
+            "dash2",
+            "dash wins"
+        );
     }
 }

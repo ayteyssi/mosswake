@@ -9,6 +9,8 @@ use bevy::prelude::*;
 use mw_core::input::PlayerId;
 use serde::{Deserialize, Serialize};
 
+use crate::mechanics::MobilityState;
+
 use crate::{
     Contacts, Facing, Player, PlayerControl, PlayerState, Position, SimId, Tick, Velocity,
 };
@@ -41,6 +43,8 @@ pub struct PlayerSnapshot {
     pub facing: Facing,
     /// Inputs and jump timers, needed to re-simulate the player exactly.
     pub control: PlayerControl,
+    /// Dash, air-jump and wall-jump state needed for exact replay.
+    pub mobility: MobilityState,
 }
 
 impl Snapshot {
@@ -52,7 +56,13 @@ impl Snapshot {
             &Position,
             &Velocity,
             &Contacts,
-            Option<(&Player, &PlayerState, &Facing, &PlayerControl)>,
+            Option<(
+                &Player,
+                &PlayerState,
+                &Facing,
+                &PlayerControl,
+                &MobilityState,
+            )>,
         )>();
         let mut bodies: Vec<BodySnapshot> = query
             .iter(world)
@@ -61,12 +71,15 @@ impl Snapshot {
                 position: position.0.to_array(),
                 velocity: velocity.0.to_array(),
                 contacts: *contacts,
-                player: player.map(|(player, state, facing, control)| PlayerSnapshot {
-                    player: player.0,
-                    state: *state,
-                    facing: *facing,
-                    control: *control,
-                }),
+                player: player.map(
+                    |(player, state, facing, control, mobility)| PlayerSnapshot {
+                        player: player.0,
+                        state: *state,
+                        facing: *facing,
+                        control: *control,
+                        mobility: *mobility,
+                    },
+                ),
             })
             .collect();
         bodies.sort_by_key(|b| b.id);

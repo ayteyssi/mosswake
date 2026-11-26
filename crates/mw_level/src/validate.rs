@@ -23,6 +23,8 @@ pub enum ValidationError {
     InvalidLegendChar { ch: char },
     #[error("legend character {ch:?} maps to an empty tile id")]
     EmptyTileId { ch: char },
+    #[error("legend character {ch:?} maps to unknown tile id `{id}`")]
+    UnknownTileId { ch: char, id: String },
     #[error("layer name must not be empty (layer #{index})")]
     EmptyLayerName { index: usize },
     #[error("layer name `{name}` is used more than once")]
@@ -104,6 +106,31 @@ impl Level {
         self.validate_placements(&mut errors);
         self.validate_script_paths(&mut errors);
         errors
+    }
+
+    /// Structural validation plus a check of every legend id against the caller's palette.
+    /// Include both named pieces and autotiled terrain families in `known_tile_ids`.
+    /// This crate does not load or depend on an atlas format.
+    pub fn validate_with_tile_ids(
+        &self,
+        known_tile_ids: &BTreeSet<String>,
+    ) -> Vec<ValidationError> {
+        let mut errors = self.validate();
+        self.validate_tile_ids(known_tile_ids, &mut errors);
+        errors
+    }
+
+    fn validate_tile_ids(
+        &self,
+        known_tile_ids: &BTreeSet<String>,
+        errors: &mut Vec<ValidationError>,
+    ) {
+        for (&ch, id) in &self.legend {
+            // Empty ids already have a structural diagnostic.
+            if !id.trim().is_empty() && !known_tile_ids.contains(id) {
+                errors.push(ValidationError::UnknownTileId { ch, id: id.clone() });
+            }
+        }
     }
 
     fn validate_header(&self, errors: &mut Vec<ValidationError>) {
@@ -226,6 +253,16 @@ impl Level {
 }
 
 impl LevelBundle {
+    /// Bundle validation plus palette validation, including unused legend entries.
+    pub fn validate_with_tile_ids(
+        &self,
+        known_tile_ids: &BTreeSet<String>,
+    ) -> Vec<ValidationError> {
+        let mut errors = self.validate();
+        self.level.validate_tile_ids(known_tile_ids, &mut errors);
+        errors
+    }
+
     /// [`Level::validate`] plus a check that every listed script has a source.
     pub fn validate(&self) -> Vec<ValidationError> {
         let mut errors = self.level.validate();
@@ -319,6 +356,60 @@ mod tests {
                 ValidationError::EmptyTileId { ch: 'x' },
             ]
         );
+    }
+
+    #[test]
+    fn palette_validation_checks_all_legend_entries_in_character_order() {
+        let mut level = valid_level();
+        let palette = BTreeSet::from(["mossy_ground".into(), "platform_1x1_a".into()]);
+        level.legend.insert('=', "platform_1x1_a".into());
+        assert!(level.validate_with_tile_ids(&palette).is_empty());
+        level.legend.insert('z', "missing_unused".into());
+        level.legend.insert('=', "mossy_platform".into());
+        level.legend.insert('a', " ".into());
+        assert_eq!(
+            level.validate_with_tile_ids(&palette),
+            vec![
+                ValidationError::EmptyTileId { ch: 'a' },
+                ValidationError::UnknownTileId {
+                    ch: '=',
+                    id: "mossy_platform".into()
+                },
+                ValidationError::UnknownTileId {
+                    ch: 'z',
+                    id: "missing_unused".into()
+                },
+            ]
+        );
+        assert_eq!(
+            serde_json::to_value(ValidationError::UnknownTileId {
+                ch: '^',
+                id: "missing".into()
+            })
+            .unwrap(),
+            serde_json::json!({"code": "unknown_tile_id", "ch": "^", "id": "missing"})
+        );
+    }
+
+    #[test]
+    fn bundle_palette_validation_preserves_missing_script_diagnostics() {
+        let mut level = valid_level();
+        level.scripts.push("scripts/main.rhai".into());
+        let bundle = LevelBundle {
+            level,
+            scripts: BTreeMap::new(),
+        };
+        let errors = bundle.validate_with_tile_ids(&BTreeSet::new());
+        assert!(matches!(&errors[0], ValidationError::MissingScript { .. }));
+        assert_eq!(errors.len(), 3);
+        assert!(matches!(
+            &errors[1],
+            ValidationError::UnknownTileId { ch: '#', .. }
+        ));
+        assert!(matches!(
+            &errors[2],
+            ValidationError::UnknownTileId { ch: '=', .. }
+        ));
     }
 
     #[test]

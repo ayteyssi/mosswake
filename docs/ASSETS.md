@@ -47,7 +47,22 @@ Types, chargement et validation : `mw_core::tileset` (`TilesetAtlas::load`, `val
 - **Parallax** (`background_decoration`, `mossy_hills`) : silhouettes à dessiner sur des couches
   d'arrière-plan défilant plus lentement ; elles peuvent aussi servir de décor de premier plan.
 
-### Format
+### Hazards dans une grille
+`thorns_tile` est la pièce dédiée aux cases `hazard` : découpe centrale de 512×316 px dans
+`decorations_and_hazards.png` à `(3278, 1939)`, au sein du dessin `thorns_small_long`.
+À 512 px/tile, son dessin fait exactement une tile de large et moins d'une tile de haut ;
+son emprise est 1×1, ancrage `bottom`, `collision: false` (pas de mur solide). Le calque
+`hazard` définit la case dangereuse, indépendamment des pixels opaques. Répéter cette pièce
+n'étend donc pas le dessin sur les cellules voisines. Les lianes complètes restent disponibles
+comme pièces libres ; aucun PNG source n'est modifié. Le chevauchement des deux rectangles
+est volontaire et testé par inclusion, seule exception au test de séparation des pièces libres.
+
+Les légendes utilisent les ids de `pieces` ou les familles `autotile.terrain` (ex.
+`mossy_ground`). Les ids `mossy_platform` et `mossy_thorns` n'existent pas : le tutorial emploie
+`mossy_ground` pour `#` et `=`, puis `thorns_tile` pour `^`. Le test de `mw_level` vérifie chaque
+niveau avec cette palette réelle via `validate_with_tile_ids`.
+
+### Format JSON
 ```json
 {
   "version": 1,

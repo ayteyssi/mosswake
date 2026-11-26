@@ -123,7 +123,7 @@ pub fn run(args: &[String]) -> Result<()> {
 
 /// Scripted inputs for demos and screenshots: stand for a second, then run right and jump
 /// whenever a gap or a wall is ahead (reading the collision grid, like a player would look),
-/// plus every 1.5 s to show the jump animation.
+/// plus every 1.5 s to show the jump animation, and a dash every 2 s.
 fn autoplay(
     time: Res<Time>,
     grid: Res<CollisionGrid>,
@@ -147,12 +147,21 @@ fn autoplay(
     }
     let jump = *hold > 0.0;
     *hold -= time.delta_secs();
+    // A dash every 2 s (only does something where the level activates the mechanic).
+    let dash = t >= 1.0 && t % 2.0 >= 1.5 && t % 2.0 < 1.55;
+    let mut pressed = 0;
+    if jump {
+        pressed |= buttons::JUMP;
+    }
+    if dash {
+        pressed |= buttons::DASH;
+    }
     inputs.0.insert(
         LOCAL,
         PlayerInput {
             axis_x: if t < 1.0 { 0 } else { 127 },
             axis_y: 0,
-            buttons: if jump { buttons::JUMP } else { 0 },
+            buttons: pressed,
         },
     );
 }
