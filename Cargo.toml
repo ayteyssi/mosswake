@@ -28,6 +28,8 @@ thiserror = "2.0.21"
 rhai = { version = "1.27.0", default-features = false, features = ["std", "sync", "no_time", "no_module"] }
 # Binaries only (libraries use thiserror).
 anyhow = "1.0.105"
+rmcp = { version = "3.12.0", default-features = false, features = ["server", "macros", "transport-io"] }
+tokio = { version = "1.54.1", features = ["macros", "rt-multi-thread", "io-std"] }
 tempfile = "3.27.0"
 mw_core = { path = "crates/mw_core" }
 mw_level = { path = "crates/mw_level" }
