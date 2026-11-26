@@ -3713,6 +3713,7 @@ dependencies = [
  "bevy",
  "mw_core",
  "mw_level",
+ "mw_net",
  "mw_render",
  "mw_sim",
 ]

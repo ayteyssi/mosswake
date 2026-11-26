@@ -12,20 +12,24 @@ use std::collections::BTreeMap;
 use bevy::prelude::*;
 use mw_core::input::{PlayerId, PlayerInput};
 use mw_level::{Level, ValidationError};
+use serde::{Deserialize, Serialize};
 
 mod grid;
 mod harness;
 mod physics;
 mod player;
 mod rules;
+mod snapshot;
 
 pub use grid::{Aabb, CollisionGrid, SweepResult};
 pub use harness::{BodyState, SimHarness};
 pub use physics::{Body, Contacts, Position, Velocity};
 pub use player::{
-    seconds_to_ticks, spawn_player, Facing, Player, PlayerControl, PlayerState, JUMP, MOVEMENT,
+    despawn_player, seconds_to_ticks, spawn_player, Facing, Player, PlayerControl, PlayerState,
+    JUMP, MOVEMENT,
 };
 pub use rules::{mechanic_active, KnownMechanics, RegisterMechanic, Rules, RulesError};
+pub use snapshot::{BodySnapshot, PlayerSnapshot, Snapshot};
 
 /// Simulation ticks per second.
 pub const TICK_HZ: f64 = 60.0;
@@ -62,7 +66,9 @@ pub struct TickInputs(pub BTreeMap<PlayerId, PlayerInput>);
 
 /// Stable identity of a simulated entity, identical on every machine running the same
 /// session (unlike Bevy's `Entity`). Allocated in spawn order by [`SimIds`].
-#[derive(Component, Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(
+    Component, Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize,
+)]
 pub struct SimId(pub u32);
 
 /// Allocator of [`SimId`]s.

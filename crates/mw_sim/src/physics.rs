@@ -2,6 +2,7 @@
 
 use bevy::math::Vec2;
 use bevy::prelude::*;
+use serde::{Deserialize, Serialize};
 
 use crate::grid::{Aabb, CollisionGrid};
 use crate::{Rules, SimSet, TICK_DT};
@@ -28,7 +29,7 @@ pub struct Body {
 ///
 /// `grounded` and `on_ceiling` follow the gravity direction: with inverted gravity,
 /// `grounded` means touching a cell **above**.
-#[derive(Component, Debug, Clone, Copy, PartialEq, Eq, Default)]
+#[derive(Component, Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
 pub struct Contacts {
     pub grounded: bool,
     pub on_ceiling: bool,
