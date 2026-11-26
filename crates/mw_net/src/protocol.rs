@@ -9,7 +9,7 @@ use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use std::time::Duration;
 
 /// Version of the messages below. Checked at connection (see [`crate::handshake`]).
-pub const PROTOCOL_VERSION: u32 = 1;
+pub const PROTOCOL_VERSION: u32 = 2;
 
 /// Delivery class of a message. Channel ids are the same in both directions.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
