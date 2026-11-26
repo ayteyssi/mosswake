@@ -52,6 +52,33 @@
 - Hors de la grille : colonnes à gauche/droite **solides** (murs invisibles), lignes en dessous/au-dessus
   **vides** (on peut tomber hors du niveau ; la mort/respawn relève de #9).
 
+### Ajouter une mécanique (exemple : dash)
+`crates/mw_sim/src/mechanics/` contient les modules indépendants `dash`, `double_jump` et
+`wall_jump`, chacun avec un plugin public et son identifiant. `SimPlugin` les installe ; les
+systèmes sont conditionnés par `mechanic_active(ID)`, donc le niveau choisit lesquels activer.
+
+1. Créer un module/plugin, appeler `register_mechanic(ID)` et ajouter ses systèmes avec
+   `.run_if(mechanic_active(ID))`.
+2. Ajouter les valeurs et défauts à `Rules`, leurs validations et leur documentation dans
+   `LEVEL_FORMAT.md`. Aucun chiffre de gameplay dans les systèmes.
+3. Choisir un `MechanicSet` (ou étendre l'ordre). Les sets de `SimSet::Mechanics` sont chaînés :
+   `Prepare → Movement → Jump → WallJump → AirJump → Dash`. `Prepare` décrémente les compteurs
+   entiers et recharge au sol ; un saut réussi marque `jumped_this_tick`. Cela empêche un front
+   de consommer à la fois un saut de base et un saut aérien. Un départ de dash gagne ensuite
+   sur la vitesse ; le dash en cours suspend le contrôle et la gravité, en gardant le balayage.
+4. Stocker l'état persistant dans un composant : `MobilityState` porte direction/durée/cooldown
+   et charge de dash, sauts aériens consommés et verrou mural. Le composant est requis par
+   `Player` et inclus dans `PlayerSnapshot` pour un replay exact (protocole v2).
+5. Tester activé/désactivé, surcharges, recharge, inputs simultanés, gravité inversée et
+   déterminisme. `tests/mechanics.rs` vérifie aussi le replay depuis un snapshot en pleine
+   capacité et le dash contre un mur à très haute vitesse.
+
+Le wall-slide tourne dans `SimSet::Physics`, **après** la gravité et **avant** le déplacement,
+afin que sa limite s'applique à la vitesse effectivement intégrée. `Rules::mechanics` peut
+retirer un pouvoir en cours de partie : plus de suspension de gravité ni de verrou dès le tick
+suivant. Les états d'animation restent ceux de `PlayerState` ; le rendu peut lire
+`MobilityState::is_dashing` pour choisir l'animation de dash.
+
 ## Scripting (`mw_script`)
 - Moteur **Rhai** créé par niveau, sandbox : `set_max_operations`, `set_max_call_levels`, pas de module fichier/réseau.
 - Exécuté **uniquement côté serveur** (et en solo dans le process local). Les clients ne voient que les effets via snapshots.

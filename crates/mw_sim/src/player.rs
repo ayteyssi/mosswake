@@ -7,6 +7,8 @@ use bevy::prelude::*;
 use mw_core::input::{buttons, PlayerId, PlayerInput};
 use serde::{Deserialize, Serialize};
 
+use crate::mechanics::{MechanicSet, MobilityState};
+
 use crate::{
     mechanic_active, tiles_to_world, Body, Contacts, LoadedLevel, Position, RegisterMechanic,
     Rules, SimId, SimIds, SimSet, TickInputs, Velocity, TICK_DT, TICK_HZ,
@@ -19,7 +21,7 @@ pub const JUMP: &str = "jump";
 
 /// Marks a player-controlled body.
 #[derive(Component, Debug, Clone, Copy, PartialEq, Eq)]
-#[require(PlayerControl, PlayerState, Facing)]
+#[require(PlayerControl, PlayerState, Facing, MobilityState)]
 pub struct Player(pub PlayerId);
 
 /// Input of this tick and the previous one (for press / release edges) and jump timers.
@@ -73,8 +75,10 @@ pub(crate) fn plugin(app: &mut App) {
         .add_systems(
             FixedUpdate,
             (
-                movement.run_if(mechanic_active(MOVEMENT)),
-                jump.run_if(mechanic_active(JUMP)),
+                movement
+                    .in_set(MechanicSet::Movement)
+                    .run_if(mechanic_active(MOVEMENT)),
+                jump.in_set(MechanicSet::Jump).run_if(mechanic_active(JUMP)),
             )
                 .in_set(SimSet::Mechanics),
         )
@@ -140,9 +144,21 @@ fn approach(current: f32, target: f32, step: f32) -> f32 {
 
 fn movement(
     rules: Res<Rules>,
-    mut players: Query<(&PlayerControl, &Contacts, &mut Velocity, &mut Facing), With<Player>>,
+    mut players: Query<
+        (
+            &PlayerControl,
+            &Contacts,
+            &MobilityState,
+            &mut Velocity,
+            &mut Facing,
+        ),
+        With<Player>,
+    >,
 ) {
-    for (control, contacts, mut velocity, mut facing) in &mut players {
+    for (control, contacts, state, mut velocity, mut facing) in &mut players {
+        if state.is_dashing(&rules) || state.wall_lock_ticks > 0 {
+            continue;
+        }
         let axis = control.input.x();
         let target = axis * rules.run_speed;
         // Accelerate when pushing along the current motion, otherwise brake.
@@ -165,10 +181,21 @@ fn movement(
 
 fn jump(
     rules: Res<Rules>,
-    mut players: Query<(&mut PlayerControl, &Contacts, &mut Velocity), With<Player>>,
+    mut players: Query<
+        (
+            &mut PlayerControl,
+            &Contacts,
+            &mut MobilityState,
+            &mut Velocity,
+        ),
+        With<Player>,
+    >,
 ) {
     let up = -rules.gravity_dir();
-    for (mut control, contacts, mut velocity) in &mut players {
+    for (mut control, contacts, mut mobility, mut velocity) in &mut players {
+        if mobility.is_dashing(&rules) {
+            continue;
+        }
         control.coyote_ticks = if contacts.grounded {
             seconds_to_ticks(rules.coyote_time).max(1)
         } else {
@@ -185,6 +212,7 @@ fn jump(
             control.buffer_ticks = 0;
             control.coyote_ticks = 0;
             control.jumping = true;
+            mobility.jumped_this_tick = true;
         } else if control.jumping {
             let rising = velocity.0.y * up > 0.0;
             if !rising {

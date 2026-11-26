@@ -73,9 +73,33 @@ mécanique non implémentée fait **refuser le niveau** au chargement. Distances
 | `jump_cut` | 0..=1 | `0.4` | Facteur appliqué à la vitesse montante si on relâche tôt (saut à hauteur variable). |
 | `coyote_time` | secondes ≥ 0 | `0.1` | Délai pendant lequel on peut encore sauter après avoir quitté un rebord. |
 | `jump_buffer` | secondes ≥ 0 | `0.1` | Un saut pressé juste avant d'atterrir part à l'atterrissage. |
+| `dash_speed` | nombre > 0 | `650.0` | Vitesse du dash horizontal (u/s). |
+| `dash_duration` | secondes > 0 | `0.15` | Durée du dash, arrondie en ticks, au moins 1 (9 par défaut). |
+| `dash_cooldown` | secondes ≥ 0 | `0.3` | Intervalle minimum entre deux départs de dash (18 ticks). |
+| `air_jumps` | entier non signé | `1` | Sauts supplémentaires avant de retoucher le sol (`0` les supprime). |
+| `wall_slide_speed` | nombre ≥ 0 | `100.0` | Vitesse de chute max en poussant contre un mur. |
+| `wall_jump_speed_x` / `wall_jump_speed_y` | nombre > 0 | `280.0` / `600.0` | Impulsion loin du mur / contre la gravité (u/s). |
+| `wall_jump_lock` | secondes ≥ 0 | `0.1` | Durée sans contrôle horizontal après le wall-jump (6 ticks). |
 
-Mécaniques disponibles : `movement` (course), `jump` (saut). Les suivantes (`double_jump`, `dash`,
-`wall_jump`, `melee`…) arrivent avec #6 et #7.
+Mécaniques disponibles : `movement` (course), `jump` (saut), `dash`, `double_jump` et `wall_jump`.
+Les trois dernières sont enregistrées mais **désactivées par défaut**. Exemple :
+`"mechanics": ["movement", "jump", "dash", "double_jump", "wall_jump"]`.
+`melee` sera ajouté par #7. Toutes les durées sont arrondies au tick le plus proche.
+
+- `dash` : nouveau front de `DASH`, axe horizontal ou orientation précédente, direction figée
+  pendant le dash. Gravité suspendue, collision solide conservée. Une charge avant de retoucher
+  le sol, cooldown compté depuis le départ ; garder le bouton enfoncé ne relance pas le dash.
+  À la fin, la vitesse X est ramenée au plus à `run_speed` (0 sans `movement`).
+- `double_jump` : nouveau front de `JUMP` en l'air, jusqu'à `air_jumps` fois. Un saut au sol ou
+  en coyote time ne consomme pas de charge. Recharge au sol, même avec gravité inversée.
+- `wall_jump` : pousser vers un mur limite la chute à `wall_slide_speed`. Un nouveau front de
+  `JUMP` en contact avec le mur propulse à l'opposé et contre la gravité. Le verrou horizontal
+  évite que l'input maintenu annule immédiatement l'impulsion. Pas de recharge aérienne au mur.
+
+Les sauts aériens et muraux peuvent fonctionner sans `jump` ; le saut variable et le buffer
+restent des fonctionnalités de `jump`. Sur un même tick : saut au sol/coyote → wall-jump → saut
+aérien ; seul le premier possible est exécuté, puis un départ de dash prend la priorité sur la
+vitesse. Pendant un dash en cours, les sauts sont ignorés.
 
 **Repères de level design (règles par défaut)** : un saut monte de 4 tiles au maximum. Prévoir
 **3 tiles au plus** entre deux surfaces pour un saut confortable. En élan, on franchit ~4 tiles
