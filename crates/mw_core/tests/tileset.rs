@@ -2,7 +2,7 @@
 
 use std::path::PathBuf;
 
-use mw_core::tileset::{Neighborhood, PieceKind, TilesetAtlas};
+use mw_core::tileset::{Anchor, Neighborhood, PieceKind, TilesetAtlas};
 
 fn mossy_dir() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../assets/tilesets/mossy")
@@ -84,6 +84,7 @@ fn piece_kinds_have_consistent_flags() {
 /// drawings can make boxes overlap by a few pixels: that is harmless when the shared area is
 /// transparent (checked on the pixels when `atlas.json` was generated, see docs/ASSETS.md),
 /// but a larger overlap means two drawings were cut into one rect.
+/// `thorns_tile` deliberately reuses a crop of `thorns_small_long` (checked separately).
 #[test]
 fn free_pieces_do_not_overlap() {
     const TOLERANCE_PX: u32 = 8;
@@ -95,6 +96,9 @@ fn free_pieces_do_not_overlap() {
         .collect();
     for (i, (a_id, a)) in free.iter().enumerate() {
         for (b_id, b) in &free[i + 1..] {
+            if a_id.as_str() == "thorns_small_long" && b_id.as_str() == "thorns_tile" {
+                continue;
+            }
             if a.sheet != b.sheet {
                 continue;
             }
@@ -111,4 +115,21 @@ fn free_pieces_do_not_overlap() {
             );
         }
     }
+}
+
+#[test]
+fn hazard_tile_fits_one_cell_and_reuses_only_the_small_thorn_drawing() {
+    let atlas = atlas();
+    let tile = &atlas.pieces["thorns_tile"];
+    let source = &atlas.pieces["thorns_small_long"];
+    assert_eq!(tile.kind, PieceKind::Hazard);
+    assert_eq!((tile.size.w, tile.size.h), (1, 1));
+    assert_eq!(tile.anchor, Anchor::Bottom);
+    assert!(!tile.collision);
+    assert_eq!(tile.sheet, source.sheet);
+    assert_eq!(tile.rect.w, atlas.pixels_per_tile);
+    assert!(tile.rect.h <= atlas.pixels_per_tile);
+    assert!(tile.rect.x >= source.rect.x && tile.rect.y >= source.rect.y);
+    assert!(tile.rect.x + tile.rect.w <= source.rect.x + source.rect.w);
+    assert!(tile.rect.y + tile.rect.h <= source.rect.y + source.rect.h);
 }
