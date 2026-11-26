@@ -22,9 +22,13 @@ renet = "2.0.1"
 renet_netcode = "2.0.1"
 postcard = { version = "1.2.0", features = ["use-std"] }
 thiserror = "2.0.21"
+# Binaries only (libraries use thiserror).
+anyhow = "1.0.105"
 tempfile = "3.27.0"
 mw_core = { path = "crates/mw_core" }
 mw_level = { path = "crates/mw_level" }
+mw_net = { path = "crates/mw_net" }
+mw_sim = { path = "crates/mw_sim" }
 
 [profile.dev]
 opt-level = 1

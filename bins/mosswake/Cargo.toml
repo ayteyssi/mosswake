@@ -7,3 +7,8 @@ license.workspace = true
 repository.workspace = true
 
 [dependencies]
+anyhow.workspace = true
+mw_core.workspace = true
+mw_level.workspace = true
+mw_net.workspace = true
+mw_sim.workspace = true

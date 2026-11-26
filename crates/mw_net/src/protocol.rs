@@ -51,7 +51,8 @@ pub enum ServerMessage {
         player: PlayerId,
         reason: LeaveReason,
     },
-    /// World state at `tick`. The payload format is defined by the snapshot issue (#13).
+    /// World state at `tick`: `data` is a `mw_sim::Snapshot` encoded with [`encode`] (this
+    /// crate does not depend on the simulation). See docs/NETCODE.md.
     Snapshot { tick: u64, data: Vec<u8> },
 }
 
