@@ -9,8 +9,8 @@
   "tile_size": 32,
   "legend": {
     "#": "mossy_ground",
-    "=": "mossy_platform",
-    "^": "mossy_thorns"
+    "=": "mossy_ground",
+    "^": "thorns_tile"
   },
   "layers": [
     {
