@@ -12,7 +12,8 @@ use serde::{Deserialize, Serialize};
 use crate::mechanics::MobilityState;
 
 use crate::{
-    Contacts, Facing, Player, PlayerControl, PlayerState, Position, SimId, Tick, Velocity,
+    combat::CombatSnapshot, Contacts, Facing, Player, PlayerControl, PlayerState, Position, SimId,
+    Tick, Velocity,
 };
 
 /// The state of the simulation after [`Snapshot::tick`] ticks.
@@ -25,7 +26,7 @@ pub struct Snapshot {
 }
 
 /// One body. Positions are feet, world units, y up (see [`Position`]).
-#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct BodySnapshot {
     pub id: SimId,
     pub position: [f32; 2],
@@ -33,6 +34,7 @@ pub struct BodySnapshot {
     pub contacts: Contacts,
     /// Present when the body is a player.
     pub player: Option<PlayerSnapshot>,
+    pub combat: Option<CombatSnapshot>,
 }
 
 /// Player-specific state of a body.
@@ -52,6 +54,7 @@ impl Snapshot {
     pub fn capture(world: &mut World) -> Self {
         let tick = world.get_resource::<Tick>().copied().unwrap_or_default().0;
         let mut query = world.query::<(
+            Entity,
             &SimId,
             &Position,
             &Velocity,
@@ -66,21 +69,24 @@ impl Snapshot {
         )>();
         let mut bodies: Vec<BodySnapshot> = query
             .iter(world)
-            .map(|(id, position, velocity, contacts, player)| BodySnapshot {
-                id: *id,
-                position: position.0.to_array(),
-                velocity: velocity.0.to_array(),
-                contacts: *contacts,
-                player: player.map(
-                    |(player, state, facing, control, mobility)| PlayerSnapshot {
-                        player: player.0,
-                        state: *state,
-                        facing: *facing,
-                        control: *control,
-                        mobility: *mobility,
-                    },
-                ),
-            })
+            .map(
+                |(entity, id, position, velocity, contacts, player)| BodySnapshot {
+                    combat: CombatSnapshot::capture(world, entity),
+                    id: *id,
+                    position: position.0.to_array(),
+                    velocity: velocity.0.to_array(),
+                    contacts: *contacts,
+                    player: player.map(|(player, state, facing, control, mobility)| {
+                        PlayerSnapshot {
+                            player: player.0,
+                            state: *state,
+                            facing: *facing,
+                            control: *control,
+                            mobility: *mobility,
+                        }
+                    }),
+                },
+            )
             .collect();
         bodies.sort_by_key(|b| b.id);
         Self { tick, bodies }
