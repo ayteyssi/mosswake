@@ -2,6 +2,8 @@
 //!
 //! See `docs/ARCHITECTURE.md` for this crate's responsibilities and boundaries.
 
+pub mod assets;
+
 /// Crate name, used in logs.
 pub const CRATE: &str = "mw_core";
 
