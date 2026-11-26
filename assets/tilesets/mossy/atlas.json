@@ -1,0 +1,1934 @@
+{
+  "version": 1,
+  "pixels_per_tile": 512,
+  "sheets": {
+    "tile_set": {
+      "file": "tile_set.png",
+      "size": {
+        "w": 3584,
+        "h": 3584
+      }
+    },
+    "floating_platforms": {
+      "file": "floating_platforms.png",
+      "size": {
+        "w": 2048,
+        "h": 2048
+      }
+    },
+    "decorations_and_hazards": {
+      "file": "decorations_and_hazards.png",
+      "size": {
+        "w": 4096,
+        "h": 4096
+      }
+    },
+    "background_decoration": {
+      "file": "background_decoration.png",
+      "size": {
+        "w": 4096,
+        "h": 4096
+      }
+    },
+    "hanging_plants": {
+      "file": "hanging_plants.png",
+      "size": {
+        "w": 2048,
+        "h": 2948
+      }
+    },
+    "mossy_hills": {
+      "file": "mossy_hills.png",
+      "size": {
+        "w": 2048,
+        "h": 2048
+      }
+    }
+  },
+  "pieces": {
+    "bg_hill_tall": {
+      "sheet": "background_decoration",
+      "rect": {
+        "x": 2395,
+        "y": 2361,
+        "w": 1687,
+        "h": 1725
+      },
+      "kind": "parallax",
+      "size": {
+        "w": 3,
+        "h": 3
+      },
+      "collision": false,
+      "anchor": "bottom"
+    },
+    "bg_mound_round": {
+      "sheet": "background_decoration",
+      "rect": {
+        "x": 2675,
+        "y": 126,
+        "w": 1086,
+        "h": 1002
+      },
+      "kind": "parallax",
+      "size": {
+        "w": 2,
+        "h": 2
+      },
+      "collision": false,
+      "anchor": "bottom"
+    },
+    "bg_mound_small": {
+      "sheet": "background_decoration",
+      "rect": {
+        "x": 1214,
+        "y": 2610,
+        "w": 923,
+        "h": 644
+      },
+      "kind": "parallax",
+      "size": {
+        "w": 2,
+        "h": 1
+      },
+      "collision": false,
+      "anchor": "bottom"
+    },
+    "bg_mound_wide": {
+      "sheet": "background_decoration",
+      "rect": {
+        "x": 2383,
+        "y": 1410,
+        "w": 1683,
+        "h": 910
+      },
+      "kind": "parallax",
+      "size": {
+        "w": 3,
+        "h": 2
+      },
+      "collision": false,
+      "anchor": "bottom"
+    },
+    "bg_pillar_short": {
+      "sheet": "background_decoration",
+      "rect": {
+        "x": 1193,
+        "y": 45,
+        "w": 1036,
+        "h": 2346
+      },
+      "kind": "parallax",
+      "size": {
+        "w": 2,
+        "h": 5
+      },
+      "collision": false,
+      "anchor": "bottom"
+    },
+    "bg_pillar_tall": {
+      "sheet": "background_decoration",
+      "rect": {
+        "x": 16,
+        "y": 45,
+        "w": 1050,
+        "h": 4029
+      },
+      "kind": "parallax",
+      "size": {
+        "w": 2,
+        "h": 8
+      },
+      "collision": false,
+      "anchor": "bottom"
+    },
+    "hanging_fern_a": {
+      "sheet": "hanging_plants",
+      "rect": {
+        "x": 113,
+        "y": 122,
+        "w": 363,
+        "h": 1175
+      },
+      "kind": "decor",
+      "size": {
+        "w": 1,
+        "h": 2
+      },
+      "collision": false,
+      "anchor": "top"
+    },
+    "hanging_fern_b": {
+      "sheet": "hanging_plants",
+      "rect": {
+        "x": 517,
+        "y": 116,
+        "w": 363,
+        "h": 974
+      },
+      "kind": "decor",
+      "size": {
+        "w": 1,
+        "h": 2
+      },
+      "collision": false,
+      "anchor": "top"
+    },
+    "hanging_fern_c": {
+      "sheet": "hanging_plants",
+      "rect": {
+        "x": 913,
+        "y": 119,
+        "w": 362,
+        "h": 975
+      },
+      "kind": "decor",
+      "size": {
+        "w": 1,
+        "h": 2
+      },
+      "collision": false,
+      "anchor": "top"
+    },
+    "hanging_fern_d": {
+      "sheet": "hanging_plants",
+      "rect": {
+        "x": 1308,
+        "y": 117,
+        "w": 303,
+        "h": 819
+      },
+      "kind": "decor",
+      "size": {
+        "w": 1,
+        "h": 2
+      },
+      "collision": false,
+      "anchor": "top"
+    },
+    "hanging_fern_side": {
+      "sheet": "hanging_plants",
+      "rect": {
+        "x": 1669,
+        "y": 105,
+        "w": 266,
+        "h": 947
+      },
+      "kind": "decor",
+      "size": {
+        "w": 1,
+        "h": 2
+      },
+      "collision": false,
+      "anchor": "top"
+    },
+    "hanging_leaf_a": {
+      "sheet": "hanging_plants",
+      "rect": {
+        "x": 1179,
+        "y": 1120,
+        "w": 759,
+        "h": 509
+      },
+      "kind": "decor",
+      "size": {
+        "w": 1,
+        "h": 1
+      },
+      "collision": false,
+      "anchor": "top"
+    },
+    "hanging_leaf_b": {
+      "sheet": "hanging_plants",
+      "rect": {
+        "x": 1225,
+        "y": 1726,
+        "w": 759,
+        "h": 509
+      },
+      "kind": "decor",
+      "size": {
+        "w": 1,
+        "h": 1
+      },
+      "collision": false,
+      "anchor": "top"
+    },
+    "hanging_leaf_c": {
+      "sheet": "hanging_plants",
+      "rect": {
+        "x": 1223,
+        "y": 2354,
+        "w": 759,
+        "h": 509
+      },
+      "kind": "decor",
+      "size": {
+        "w": 1,
+        "h": 1
+      },
+      "collision": false,
+      "anchor": "top"
+    },
+    "hanging_moss_a": {
+      "sheet": "hanging_plants",
+      "rect": {
+        "x": 89,
+        "y": 1400,
+        "w": 465,
+        "h": 1374
+      },
+      "kind": "decor",
+      "size": {
+        "w": 1,
+        "h": 3
+      },
+      "collision": false,
+      "anchor": "top"
+    },
+    "hanging_moss_b": {
+      "sheet": "hanging_plants",
+      "rect": {
+        "x": 718,
+        "y": 1400,
+        "w": 465,
+        "h": 1374
+      },
+      "kind": "decor",
+      "size": {
+        "w": 1,
+        "h": 3
+      },
+      "collision": false,
+      "anchor": "top"
+    },
+    "hill_blob": {
+      "sheet": "mossy_hills",
+      "rect": {
+        "x": 647,
+        "y": 616,
+        "w": 1239,
+        "h": 857
+      },
+      "kind": "parallax",
+      "size": {
+        "w": 2,
+        "h": 2
+      },
+      "collision": false,
+      "anchor": "bottom"
+    },
+    "hill_bush": {
+      "sheet": "mossy_hills",
+      "rect": {
+        "x": 1456,
+        "y": 1581,
+        "w": 534,
+        "h": 423
+      },
+      "kind": "parallax",
+      "size": {
+        "w": 1,
+        "h": 1
+      },
+      "collision": false,
+      "anchor": "bottom"
+    },
+    "hill_mound_a": {
+      "sheet": "mossy_hills",
+      "rect": {
+        "x": 689,
+        "y": 38,
+        "w": 1156,
+        "h": 487
+      },
+      "kind": "parallax",
+      "size": {
+        "w": 2,
+        "h": 1
+      },
+      "collision": false,
+      "anchor": "bottom"
+    },
+    "hill_mound_b": {
+      "sheet": "mossy_hills",
+      "rect": {
+        "x": 63,
+        "y": 1510,
+        "w": 1324,
+        "h": 451
+      },
+      "kind": "parallax",
+      "size": {
+        "w": 3,
+        "h": 1
+      },
+      "collision": false,
+      "anchor": "bottom"
+    },
+    "hill_tuft_a": {
+      "sheet": "mossy_hills",
+      "rect": {
+        "x": 137,
+        "y": 83,
+        "w": 256,
+        "h": 317
+      },
+      "kind": "parallax",
+      "size": {
+        "w": 1,
+        "h": 1
+      },
+      "collision": false,
+      "anchor": "bottom"
+    },
+    "hill_tuft_b": {
+      "sheet": "mossy_hills",
+      "rect": {
+        "x": 68,
+        "y": 574,
+        "w": 381,
+        "h": 368
+      },
+      "kind": "parallax",
+      "size": {
+        "w": 1,
+        "h": 1
+      },
+      "collision": false,
+      "anchor": "bottom"
+    },
+    "hill_tuft_c": {
+      "sheet": "mossy_hills",
+      "rect": {
+        "x": 134,
+        "y": 1142,
+        "w": 281,
+        "h": 275
+      },
+      "kind": "parallax",
+      "size": {
+        "w": 1,
+        "h": 1
+      },
+      "collision": false,
+      "anchor": "bottom"
+    },
+    "mossy_ground_0_0": {
+      "sheet": "tile_set",
+      "rect": {
+        "x": 0,
+        "y": 0,
+        "w": 512,
+        "h": 512
+      },
+      "kind": "terrain",
+      "size": {
+        "w": 1,
+        "h": 1
+      },
+      "collision": true,
+      "anchor": "center",
+      "autotile": {
+        "terrain": "mossy_ground",
+        "neighbors": "*.*/.##/*##"
+      }
+    },
+    "mossy_ground_0_1": {
+      "sheet": "tile_set",
+      "rect": {
+        "x": 512,
+        "y": 0,
+        "w": 512,
+        "h": 512
+      },
+      "kind": "terrain",
+      "size": {
+        "w": 1,
+        "h": 1
+      },
+      "collision": true,
+      "anchor": "center",
+      "autotile": {
+        "terrain": "mossy_ground",
+        "neighbors": "*.*/###/###"
+      }
+    },
+    "mossy_ground_0_2": {
+      "sheet": "tile_set",
+      "rect": {
+        "x": 1024,
+        "y": 0,
+        "w": 512,
+        "h": 512
+      },
+      "kind": "terrain",
+      "size": {
+        "w": 1,
+        "h": 1
+      },
+      "collision": true,
+      "anchor": "center",
+      "autotile": {
+        "terrain": "mossy_ground",
+        "neighbors": "*.*/##./##*"
+      }
+    },
+    "mossy_ground_0_3": {
+      "sheet": "tile_set",
+      "rect": {
+        "x": 1536,
+        "y": 0,
+        "w": 512,
+        "h": 512
+      },
+      "kind": "terrain",
+      "size": {
+        "w": 1,
+        "h": 1
+      },
+      "collision": true,
+      "anchor": "center",
+      "autotile": {
+        "terrain": "mossy_ground",
+        "neighbors": "*.*/.#./*#*"
+      }
+    },
+    "mossy_ground_0_4": {
+      "sheet": "tile_set",
+      "rect": {
+        "x": 2048,
+        "y": 0,
+        "w": 512,
+        "h": 512
+      },
+      "kind": "terrain",
+      "size": {
+        "w": 1,
+        "h": 1
+      },
+      "collision": true,
+      "anchor": "center",
+      "autotile": {
+        "terrain": "mossy_ground",
+        "neighbors": "###/###/##."
+      }
+    },
+    "mossy_ground_0_5": {
+      "sheet": "tile_set",
+      "rect": {
+        "x": 2560,
+        "y": 0,
+        "w": 512,
+        "h": 512
+      },
+      "kind": "terrain",
+      "size": {
+        "w": 1,
+        "h": 1
+      },
+      "collision": true,
+      "anchor": "center",
+      "autotile": {
+        "terrain": "mossy_ground",
+        "neighbors": "###/###/.##"
+      }
+    },
+    "mossy_ground_0_6": {
+      "sheet": "tile_set",
+      "rect": {
+        "x": 3072,
+        "y": 0,
+        "w": 512,
+        "h": 512
+      },
+      "kind": "terrain",
+      "size": {
+        "w": 1,
+        "h": 1
+      },
+      "collision": true,
+      "anchor": "center",
+      "autotile": {
+        "terrain": "mossy_ground",
+        "neighbors": ".#./###/###"
+      }
+    },
+    "mossy_ground_1_0": {
+      "sheet": "tile_set",
+      "rect": {
+        "x": 0,
+        "y": 512,
+        "w": 512,
+        "h": 512
+      },
+      "kind": "terrain",
+      "size": {
+        "w": 1,
+        "h": 1
+      },
+      "collision": true,
+      "anchor": "center",
+      "autotile": {
+        "terrain": "mossy_ground",
+        "neighbors": "*##/.##/*##"
+      }
+    },
+    "mossy_ground_1_1": {
+      "sheet": "tile_set",
+      "rect": {
+        "x": 512,
+        "y": 512,
+        "w": 512,
+        "h": 512
+      },
+      "kind": "terrain",
+      "size": {
+        "w": 1,
+        "h": 1
+      },
+      "collision": true,
+      "anchor": "center",
+      "autotile": {
+        "terrain": "mossy_ground",
+        "neighbors": "###/###/###"
+      }
+    },
+    "mossy_ground_1_2": {
+      "sheet": "tile_set",
+      "rect": {
+        "x": 1024,
+        "y": 512,
+        "w": 512,
+        "h": 512
+      },
+      "kind": "terrain",
+      "size": {
+        "w": 1,
+        "h": 1
+      },
+      "collision": true,
+      "anchor": "center",
+      "autotile": {
+        "terrain": "mossy_ground",
+        "neighbors": "##*/##./##*"
+      }
+    },
+    "mossy_ground_1_3": {
+      "sheet": "tile_set",
+      "rect": {
+        "x": 1536,
+        "y": 512,
+        "w": 512,
+        "h": 512
+      },
+      "kind": "terrain",
+      "size": {
+        "w": 1,
+        "h": 1
+      },
+      "collision": true,
+      "anchor": "center",
+      "autotile": {
+        "terrain": "mossy_ground",
+        "neighbors": "*#*/.#./*#*"
+      }
+    },
+    "mossy_ground_1_4": {
+      "sheet": "tile_set",
+      "rect": {
+        "x": 2048,
+        "y": 512,
+        "w": 512,
+        "h": 512
+      },
+      "kind": "terrain",
+      "size": {
+        "w": 1,
+        "h": 1
+      },
+      "collision": true,
+      "anchor": "center",
+      "autotile": {
+        "terrain": "mossy_ground",
+        "neighbors": "##./###/###"
+      }
+    },
+    "mossy_ground_1_5": {
+      "sheet": "tile_set",
+      "rect": {
+        "x": 2560,
+        "y": 512,
+        "w": 512,
+        "h": 512
+      },
+      "kind": "terrain",
+      "size": {
+        "w": 1,
+        "h": 1
+      },
+      "collision": true,
+      "anchor": "center",
+      "autotile": {
+        "terrain": "mossy_ground",
+        "neighbors": ".##/###/###"
+      }
+    },
+    "mossy_ground_1_6": {
+      "sheet": "tile_set",
+      "rect": {
+        "x": 3072,
+        "y": 512,
+        "w": 512,
+        "h": 512
+      },
+      "kind": "terrain",
+      "size": {
+        "w": 1,
+        "h": 1
+      },
+      "collision": true,
+      "anchor": "center",
+      "autotile": {
+        "terrain": "mossy_ground",
+        "neighbors": ".##/###/.##"
+      }
+    },
+    "mossy_ground_2_0": {
+      "sheet": "tile_set",
+      "rect": {
+        "x": 0,
+        "y": 1024,
+        "w": 512,
+        "h": 512
+      },
+      "kind": "terrain",
+      "size": {
+        "w": 1,
+        "h": 1
+      },
+      "collision": true,
+      "anchor": "center",
+      "autotile": {
+        "terrain": "mossy_ground",
+        "neighbors": "*##/.##/*.*"
+      }
+    },
+    "mossy_ground_2_1": {
+      "sheet": "tile_set",
+      "rect": {
+        "x": 512,
+        "y": 1024,
+        "w": 512,
+        "h": 512
+      },
+      "kind": "terrain",
+      "size": {
+        "w": 1,
+        "h": 1
+      },
+      "collision": true,
+      "anchor": "center",
+      "autotile": {
+        "terrain": "mossy_ground",
+        "neighbors": "###/###/*.*"
+      }
+    },
+    "mossy_ground_2_2": {
+      "sheet": "tile_set",
+      "rect": {
+        "x": 1024,
+        "y": 1024,
+        "w": 512,
+        "h": 512
+      },
+      "kind": "terrain",
+      "size": {
+        "w": 1,
+        "h": 1
+      },
+      "collision": true,
+      "anchor": "center",
+      "autotile": {
+        "terrain": "mossy_ground",
+        "neighbors": "##*/##./*.*"
+      }
+    },
+    "mossy_ground_2_3": {
+      "sheet": "tile_set",
+      "rect": {
+        "x": 1536,
+        "y": 1024,
+        "w": 512,
+        "h": 512
+      },
+      "kind": "terrain",
+      "size": {
+        "w": 1,
+        "h": 1
+      },
+      "collision": true,
+      "anchor": "center",
+      "autotile": {
+        "terrain": "mossy_ground",
+        "neighbors": "*#*/.#./*.*"
+      }
+    },
+    "mossy_ground_2_4": {
+      "sheet": "tile_set",
+      "rect": {
+        "x": 2048,
+        "y": 1024,
+        "w": 512,
+        "h": 512
+      },
+      "kind": "terrain",
+      "size": {
+        "w": 1,
+        "h": 1
+      },
+      "collision": true,
+      "anchor": "center",
+      "autotile": {
+        "terrain": "mossy_ground",
+        "neighbors": ".#./###/##."
+      }
+    },
+    "mossy_ground_2_5": {
+      "sheet": "tile_set",
+      "rect": {
+        "x": 2560,
+        "y": 1024,
+        "w": 512,
+        "h": 512
+      },
+      "kind": "terrain",
+      "size": {
+        "w": 1,
+        "h": 1
+      },
+      "collision": true,
+      "anchor": "center",
+      "autotile": {
+        "terrain": "mossy_ground",
+        "neighbors": ".##/###/.#."
+      }
+    },
+    "mossy_ground_2_6": {
+      "sheet": "tile_set",
+      "rect": {
+        "x": 3072,
+        "y": 1024,
+        "w": 512,
+        "h": 512
+      },
+      "kind": "terrain",
+      "size": {
+        "w": 1,
+        "h": 1
+      },
+      "collision": true,
+      "anchor": "center",
+      "autotile": {
+        "terrain": "mossy_ground",
+        "neighbors": "##./###/##."
+      }
+    },
+    "mossy_ground_3_0": {
+      "sheet": "tile_set",
+      "rect": {
+        "x": 0,
+        "y": 1536,
+        "w": 512,
+        "h": 512
+      },
+      "kind": "terrain",
+      "size": {
+        "w": 1,
+        "h": 1
+      },
+      "collision": true,
+      "anchor": "center",
+      "autotile": {
+        "terrain": "mossy_ground",
+        "neighbors": "*.*/.##/*.*"
+      }
+    },
+    "mossy_ground_3_1": {
+      "sheet": "tile_set",
+      "rect": {
+        "x": 512,
+        "y": 1536,
+        "w": 512,
+        "h": 512
+      },
+      "kind": "terrain",
+      "size": {
+        "w": 1,
+        "h": 1
+      },
+      "collision": true,
+      "anchor": "center",
+      "autotile": {
+        "terrain": "mossy_ground",
+        "neighbors": "*.*/###/*.*"
+      }
+    },
+    "mossy_ground_3_2": {
+      "sheet": "tile_set",
+      "rect": {
+        "x": 1024,
+        "y": 1536,
+        "w": 512,
+        "h": 512
+      },
+      "kind": "terrain",
+      "size": {
+        "w": 1,
+        "h": 1
+      },
+      "collision": true,
+      "anchor": "center",
+      "autotile": {
+        "terrain": "mossy_ground",
+        "neighbors": "*.*/##./*.*"
+      }
+    },
+    "mossy_ground_3_3": {
+      "sheet": "tile_set",
+      "rect": {
+        "x": 1536,
+        "y": 1536,
+        "w": 512,
+        "h": 512
+      },
+      "kind": "terrain",
+      "size": {
+        "w": 1,
+        "h": 1
+      },
+      "collision": true,
+      "anchor": "center",
+      "autotile": {
+        "terrain": "mossy_ground",
+        "neighbors": "*.*/.#./*.*"
+      }
+    },
+    "mossy_ground_3_4": {
+      "sheet": "tile_set",
+      "rect": {
+        "x": 2048,
+        "y": 1536,
+        "w": 512,
+        "h": 512
+      },
+      "kind": "terrain",
+      "size": {
+        "w": 1,
+        "h": 1
+      },
+      "collision": true,
+      "anchor": "center",
+      "autotile": {
+        "terrain": "mossy_ground",
+        "neighbors": "##./###/.#."
+      }
+    },
+    "mossy_ground_3_5": {
+      "sheet": "tile_set",
+      "rect": {
+        "x": 2560,
+        "y": 1536,
+        "w": 512,
+        "h": 512
+      },
+      "kind": "terrain",
+      "size": {
+        "w": 1,
+        "h": 1
+      },
+      "collision": true,
+      "anchor": "center",
+      "autotile": {
+        "terrain": "mossy_ground",
+        "neighbors": ".#./###/.##"
+      }
+    },
+    "mossy_ground_3_6": {
+      "sheet": "tile_set",
+      "rect": {
+        "x": 3072,
+        "y": 1536,
+        "w": 512,
+        "h": 512
+      },
+      "kind": "terrain",
+      "size": {
+        "w": 1,
+        "h": 1
+      },
+      "collision": true,
+      "anchor": "center",
+      "autotile": {
+        "terrain": "mossy_ground",
+        "neighbors": "###/###/.#."
+      }
+    },
+    "mossy_ground_4_0": {
+      "sheet": "tile_set",
+      "rect": {
+        "x": 0,
+        "y": 2048,
+        "w": 512,
+        "h": 512
+      },
+      "kind": "terrain",
+      "size": {
+        "w": 1,
+        "h": 1
+      },
+      "collision": true,
+      "anchor": "center",
+      "autotile": {
+        "terrain": "mossy_ground",
+        "neighbors": "*##/.##/*#."
+      }
+    },
+    "mossy_ground_4_1": {
+      "sheet": "tile_set",
+      "rect": {
+        "x": 512,
+        "y": 2048,
+        "w": 512,
+        "h": 512
+      },
+      "kind": "terrain",
+      "size": {
+        "w": 1,
+        "h": 1
+      },
+      "collision": true,
+      "anchor": "center",
+      "autotile": {
+        "terrain": "mossy_ground",
+        "neighbors": "##*/##./.#*"
+      }
+    },
+    "mossy_ground_4_2": {
+      "sheet": "tile_set",
+      "rect": {
+        "x": 1024,
+        "y": 2048,
+        "w": 512,
+        "h": 512
+      },
+      "kind": "terrain",
+      "size": {
+        "w": 1,
+        "h": 1
+      },
+      "collision": true,
+      "anchor": "center",
+      "autotile": {
+        "terrain": "mossy_ground",
+        "neighbors": "*.*/###/##."
+      }
+    },
+    "mossy_ground_4_3": {
+      "sheet": "tile_set",
+      "rect": {
+        "x": 1536,
+        "y": 2048,
+        "w": 512,
+        "h": 512
+      },
+      "kind": "terrain",
+      "size": {
+        "w": 1,
+        "h": 1
+      },
+      "collision": true,
+      "anchor": "center",
+      "autotile": {
+        "terrain": "mossy_ground",
+        "neighbors": "*.*/###/.##"
+      }
+    },
+    "mossy_ground_4_4": {
+      "sheet": "tile_set",
+      "rect": {
+        "x": 2048,
+        "y": 2048,
+        "w": 512,
+        "h": 512
+      },
+      "kind": "terrain",
+      "size": {
+        "w": 1,
+        "h": 1
+      },
+      "collision": true,
+      "anchor": "center",
+      "autotile": {
+        "terrain": "mossy_ground",
+        "neighbors": "*.*/.##/*#."
+      }
+    },
+    "mossy_ground_4_5": {
+      "sheet": "tile_set",
+      "rect": {
+        "x": 2560,
+        "y": 2048,
+        "w": 512,
+        "h": 512
+      },
+      "kind": "terrain",
+      "size": {
+        "w": 1,
+        "h": 1
+      },
+      "collision": true,
+      "anchor": "center",
+      "autotile": {
+        "terrain": "mossy_ground",
+        "neighbors": "*.*/###/.#."
+      }
+    },
+    "mossy_ground_4_6": {
+      "sheet": "tile_set",
+      "rect": {
+        "x": 3072,
+        "y": 2048,
+        "w": 512,
+        "h": 512
+      },
+      "kind": "terrain",
+      "size": {
+        "w": 1,
+        "h": 1
+      },
+      "collision": true,
+      "anchor": "center",
+      "autotile": {
+        "terrain": "mossy_ground",
+        "neighbors": "*.*/##./.#*"
+      }
+    },
+    "mossy_ground_5_0": {
+      "sheet": "tile_set",
+      "rect": {
+        "x": 0,
+        "y": 2560,
+        "w": 512,
+        "h": 512
+      },
+      "kind": "terrain",
+      "size": {
+        "w": 1,
+        "h": 1
+      },
+      "collision": true,
+      "anchor": "center",
+      "autotile": {
+        "terrain": "mossy_ground",
+        "neighbors": "*#./.##/*##"
+      }
+    },
+    "mossy_ground_5_1": {
+      "sheet": "tile_set",
+      "rect": {
+        "x": 512,
+        "y": 2560,
+        "w": 512,
+        "h": 512
+      },
+      "kind": "terrain",
+      "size": {
+        "w": 1,
+        "h": 1
+      },
+      "collision": true,
+      "anchor": "center",
+      "autotile": {
+        "terrain": "mossy_ground",
+        "neighbors": ".#*/##./##*"
+      }
+    },
+    "mossy_ground_5_2": {
+      "sheet": "tile_set",
+      "rect": {
+        "x": 1024,
+        "y": 2560,
+        "w": 512,
+        "h": 512
+      },
+      "kind": "terrain",
+      "size": {
+        "w": 1,
+        "h": 1
+      },
+      "collision": true,
+      "anchor": "center",
+      "autotile": {
+        "terrain": "mossy_ground",
+        "neighbors": "##./###/*.*"
+      }
+    },
+    "mossy_ground_5_3": {
+      "sheet": "tile_set",
+      "rect": {
+        "x": 1536,
+        "y": 2560,
+        "w": 512,
+        "h": 512
+      },
+      "kind": "terrain",
+      "size": {
+        "w": 1,
+        "h": 1
+      },
+      "collision": true,
+      "anchor": "center",
+      "autotile": {
+        "terrain": "mossy_ground",
+        "neighbors": ".##/###/*.*"
+      }
+    },
+    "mossy_ground_5_4": {
+      "sheet": "tile_set",
+      "rect": {
+        "x": 2048,
+        "y": 2560,
+        "w": 512,
+        "h": 512
+      },
+      "kind": "terrain",
+      "size": {
+        "w": 1,
+        "h": 1
+      },
+      "collision": true,
+      "anchor": "center",
+      "autotile": {
+        "terrain": "mossy_ground",
+        "neighbors": "*#./.##/*#."
+      }
+    },
+    "mossy_ground_5_5": {
+      "sheet": "tile_set",
+      "rect": {
+        "x": 2560,
+        "y": 2560,
+        "w": 512,
+        "h": 512
+      },
+      "kind": "terrain",
+      "size": {
+        "w": 1,
+        "h": 1
+      },
+      "collision": true,
+      "anchor": "center",
+      "autotile": {
+        "terrain": "mossy_ground",
+        "neighbors": ".#./###/.#."
+      }
+    },
+    "mossy_ground_5_6": {
+      "sheet": "tile_set",
+      "rect": {
+        "x": 3072,
+        "y": 2560,
+        "w": 512,
+        "h": 512
+      },
+      "kind": "terrain",
+      "size": {
+        "w": 1,
+        "h": 1
+      },
+      "collision": true,
+      "anchor": "center",
+      "autotile": {
+        "terrain": "mossy_ground",
+        "neighbors": ".#*/##./.#*"
+      }
+    },
+    "mossy_ground_6_2": {
+      "sheet": "tile_set",
+      "rect": {
+        "x": 1024,
+        "y": 3072,
+        "w": 512,
+        "h": 512
+      },
+      "kind": "terrain",
+      "size": {
+        "w": 1,
+        "h": 1
+      },
+      "collision": true,
+      "anchor": "center",
+      "autotile": {
+        "terrain": "mossy_ground",
+        "neighbors": "##./###/.##"
+      }
+    },
+    "mossy_ground_6_3": {
+      "sheet": "tile_set",
+      "rect": {
+        "x": 1536,
+        "y": 3072,
+        "w": 512,
+        "h": 512
+      },
+      "kind": "terrain",
+      "size": {
+        "w": 1,
+        "h": 1
+      },
+      "collision": true,
+      "anchor": "center",
+      "autotile": {
+        "terrain": "mossy_ground",
+        "neighbors": ".##/###/##."
+      }
+    },
+    "mossy_ground_6_4": {
+      "sheet": "tile_set",
+      "rect": {
+        "x": 2048,
+        "y": 3072,
+        "w": 512,
+        "h": 512
+      },
+      "kind": "terrain",
+      "size": {
+        "w": 1,
+        "h": 1
+      },
+      "collision": true,
+      "anchor": "center",
+      "autotile": {
+        "terrain": "mossy_ground",
+        "neighbors": "*#./.##/*.*"
+      }
+    },
+    "mossy_ground_6_5": {
+      "sheet": "tile_set",
+      "rect": {
+        "x": 2560,
+        "y": 3072,
+        "w": 512,
+        "h": 512
+      },
+      "kind": "terrain",
+      "size": {
+        "w": 1,
+        "h": 1
+      },
+      "collision": true,
+      "anchor": "center",
+      "autotile": {
+        "terrain": "mossy_ground",
+        "neighbors": ".#./###/*.*"
+      }
+    },
+    "mossy_ground_6_6": {
+      "sheet": "tile_set",
+      "rect": {
+        "x": 3072,
+        "y": 3072,
+        "w": 512,
+        "h": 512
+      },
+      "kind": "terrain",
+      "size": {
+        "w": 1,
+        "h": 1
+      },
+      "collision": true,
+      "anchor": "center",
+      "autotile": {
+        "terrain": "mossy_ground",
+        "neighbors": ".#*/##./*.*"
+      }
+    },
+    "mossy_hole_a": {
+      "sheet": "tile_set",
+      "rect": {
+        "x": 0,
+        "y": 3072,
+        "w": 512,
+        "h": 512
+      },
+      "kind": "decor",
+      "size": {
+        "w": 1,
+        "h": 1
+      },
+      "collision": false,
+      "anchor": "center"
+    },
+    "mossy_hole_b": {
+      "sheet": "tile_set",
+      "rect": {
+        "x": 512,
+        "y": 3072,
+        "w": 512,
+        "h": 512
+      },
+      "kind": "decor",
+      "size": {
+        "w": 1,
+        "h": 1
+      },
+      "collision": false,
+      "anchor": "center"
+    },
+    "platform_1x1_a": {
+      "sheet": "floating_platforms",
+      "rect": {
+        "x": 116,
+        "y": 51,
+        "w": 256,
+        "h": 317
+      },
+      "kind": "platform",
+      "size": {
+        "w": 1,
+        "h": 1
+      },
+      "collision": true,
+      "anchor": "center"
+    },
+    "platform_1x1_b": {
+      "sheet": "floating_platforms",
+      "rect": {
+        "x": 47,
+        "y": 542,
+        "w": 381,
+        "h": 368
+      },
+      "kind": "platform",
+      "size": {
+        "w": 1,
+        "h": 1
+      },
+      "collision": true,
+      "anchor": "center"
+    },
+    "platform_1x1_c": {
+      "sheet": "floating_platforms",
+      "rect": {
+        "x": 113,
+        "y": 1110,
+        "w": 281,
+        "h": 275
+      },
+      "kind": "platform",
+      "size": {
+        "w": 1,
+        "h": 1
+      },
+      "collision": true,
+      "anchor": "center"
+    },
+    "platform_1x2": {
+      "sheet": "floating_platforms",
+      "rect": {
+        "x": 1594,
+        "y": 45,
+        "w": 448,
+        "h": 940
+      },
+      "kind": "platform",
+      "size": {
+        "w": 1,
+        "h": 2
+      },
+      "collision": true,
+      "anchor": "center"
+    },
+    "platform_2x1_a": {
+      "sheet": "floating_platforms",
+      "rect": {
+        "x": 479,
+        "y": 36,
+        "w": 1049,
+        "h": 450
+      },
+      "kind": "platform",
+      "size": {
+        "w": 2,
+        "h": 1
+      },
+      "collision": true,
+      "anchor": "center"
+    },
+    "platform_2x1_b": {
+      "sheet": "floating_platforms",
+      "rect": {
+        "x": 497,
+        "y": 538,
+        "w": 1049,
+        "h": 450
+      },
+      "kind": "platform",
+      "size": {
+        "w": 2,
+        "h": 1
+      },
+      "collision": true,
+      "anchor": "center"
+    },
+    "platform_3x1": {
+      "sheet": "floating_platforms",
+      "rect": {
+        "x": 438,
+        "y": 1095,
+        "w": 1561,
+        "h": 450
+      },
+      "kind": "platform",
+      "size": {
+        "w": 3,
+        "h": 1
+      },
+      "collision": true,
+      "anchor": "center"
+    },
+    "platform_4x1": {
+      "sheet": "floating_platforms",
+      "rect": {
+        "x": 20,
+        "y": 1566,
+        "w": 2013,
+        "h": 450
+      },
+      "kind": "platform",
+      "size": {
+        "w": 4,
+        "h": 1
+      },
+      "collision": true,
+      "anchor": "center"
+    },
+    "rock_a": {
+      "sheet": "decorations_and_hazards",
+      "rect": {
+        "x": 232,
+        "y": 191,
+        "w": 1284,
+        "h": 707
+      },
+      "kind": "decor",
+      "size": {
+        "w": 3,
+        "h": 1
+      },
+      "collision": false,
+      "anchor": "bottom"
+    },
+    "rock_b": {
+      "sheet": "decorations_and_hazards",
+      "rect": {
+        "x": 1604,
+        "y": 401,
+        "w": 1140,
+        "h": 512
+      },
+      "kind": "decor",
+      "size": {
+        "w": 2,
+        "h": 1
+      },
+      "collision": false,
+      "anchor": "bottom"
+    },
+    "rock_c": {
+      "sheet": "decorations_and_hazards",
+      "rect": {
+        "x": 2892,
+        "y": 9,
+        "w": 1054,
+        "h": 915
+      },
+      "kind": "decor",
+      "size": {
+        "w": 2,
+        "h": 2
+      },
+      "collision": false,
+      "anchor": "bottom"
+    },
+    "sprout_01": {
+      "sheet": "decorations_and_hazards",
+      "rect": {
+        "x": 97,
+        "y": 2640,
+        "w": 289,
+        "h": 258
+      },
+      "kind": "decor",
+      "size": {
+        "w": 1,
+        "h": 1
+      },
+      "collision": false,
+      "anchor": "bottom"
+    },
+    "sprout_02": {
+      "sheet": "decorations_and_hazards",
+      "rect": {
+        "x": 657,
+        "y": 2625,
+        "w": 274,
+        "h": 379
+      },
+      "kind": "decor",
+      "size": {
+        "w": 1,
+        "h": 1
+      },
+      "collision": false,
+      "anchor": "bottom"
+    },
+    "sprout_03": {
+      "sheet": "decorations_and_hazards",
+      "rect": {
+        "x": 1235,
+        "y": 2630,
+        "w": 150,
+        "h": 359
+      },
+      "kind": "decor",
+      "size": {
+        "w": 1,
+        "h": 1
+      },
+      "collision": false,
+      "anchor": "bottom"
+    },
+    "sprout_04": {
+      "sheet": "decorations_and_hazards",
+      "rect": {
+        "x": 1426,
+        "y": 2936,
+        "w": 138,
+        "h": 174
+      },
+      "kind": "decor",
+      "size": {
+        "w": 1,
+        "h": 1
+      },
+      "collision": false,
+      "anchor": "bottom"
+    },
+    "sprout_05": {
+      "sheet": "decorations_and_hazards",
+      "rect": {
+        "x": 1579,
+        "y": 2735,
+        "w": 440,
+        "h": 180
+      },
+      "kind": "decor",
+      "size": {
+        "w": 1,
+        "h": 1
+      },
+      "collision": false,
+      "anchor": "bottom"
+    },
+    "sprout_06": {
+      "sheet": "decorations_and_hazards",
+      "rect": {
+        "x": 80,
+        "y": 3076,
+        "w": 342,
+        "h": 441
+      },
+      "kind": "decor",
+      "size": {
+        "w": 1,
+        "h": 1
+      },
+      "collision": false,
+      "anchor": "bottom"
+    },
+    "sprout_07": {
+      "sheet": "decorations_and_hazards",
+      "rect": {
+        "x": 618,
+        "y": 3180,
+        "w": 299,
+        "h": 227
+      },
+      "kind": "decor",
+      "size": {
+        "w": 1,
+        "h": 1
+      },
+      "collision": false,
+      "anchor": "bottom"
+    },
+    "sprout_08": {
+      "sheet": "decorations_and_hazards",
+      "rect": {
+        "x": 1170,
+        "y": 3104,
+        "w": 171,
+        "h": 408
+      },
+      "kind": "decor",
+      "size": {
+        "w": 1,
+        "h": 1
+      },
+      "collision": false,
+      "anchor": "bottom"
+    },
+    "sprout_09": {
+      "sheet": "decorations_and_hazards",
+      "rect": {
+        "x": 1600,
+        "y": 3073,
+        "w": 402,
+        "h": 448
+      },
+      "kind": "decor",
+      "size": {
+        "w": 1,
+        "h": 1
+      },
+      "collision": false,
+      "anchor": "bottom"
+    },
+    "sprout_10": {
+      "sheet": "decorations_and_hazards",
+      "rect": {
+        "x": 220,
+        "y": 3586,
+        "w": 99,
+        "h": 450
+      },
+      "kind": "decor",
+      "size": {
+        "w": 1,
+        "h": 1
+      },
+      "collision": false,
+      "anchor": "bottom"
+    },
+    "sprout_11": {
+      "sheet": "decorations_and_hazards",
+      "rect": {
+        "x": 574,
+        "y": 3573,
+        "w": 368,
+        "h": 475
+      },
+      "kind": "decor",
+      "size": {
+        "w": 1,
+        "h": 1
+      },
+      "collision": false,
+      "anchor": "bottom"
+    },
+    "sprout_12": {
+      "sheet": "decorations_and_hazards",
+      "rect": {
+        "x": 1258,
+        "y": 3633,
+        "w": 85,
+        "h": 394
+      },
+      "kind": "decor",
+      "size": {
+        "w": 1,
+        "h": 1
+      },
+      "collision": false,
+      "anchor": "bottom"
+    },
+    "sprout_13": {
+      "sheet": "decorations_and_hazards",
+      "rect": {
+        "x": 1600,
+        "y": 3618,
+        "w": 365,
+        "h": 399
+      },
+      "kind": "decor",
+      "size": {
+        "w": 1,
+        "h": 1
+      },
+      "collision": false,
+      "anchor": "bottom"
+    },
+    "thorns_arch": {
+      "sheet": "decorations_and_hazards",
+      "rect": {
+        "x": 434,
+        "y": 1634,
+        "w": 918,
+        "h": 851
+      },
+      "kind": "hazard",
+      "size": {
+        "w": 2,
+        "h": 2
+      },
+      "collision": false,
+      "anchor": "bottom"
+    },
+    "thorns_hook": {
+      "sheet": "decorations_and_hazards",
+      "rect": {
+        "x": 2066,
+        "y": 971,
+        "w": 1226,
+        "h": 809
+      },
+      "kind": "hazard",
+      "size": {
+        "w": 2,
+        "h": 2
+      },
+      "collision": false,
+      "anchor": "bottom"
+    },
+    "thorns_long": {
+      "sheet": "decorations_and_hazards",
+      "rect": {
+        "x": 125,
+        "y": 961,
+        "w": 1473,
+        "h": 627
+      },
+      "kind": "hazard",
+      "size": {
+        "w": 3,
+        "h": 1
+      },
+      "collision": false,
+      "anchor": "bottom"
+    },
+    "thorns_small_arch": {
+      "sheet": "decorations_and_hazards",
+      "rect": {
+        "x": 1664,
+        "y": 1892,
+        "w": 457,
+        "h": 424
+      },
+      "kind": "hazard",
+      "size": {
+        "w": 1,
+        "h": 1
+      },
+      "collision": false,
+      "anchor": "bottom"
+    },
+    "thorns_small_hook": {
+      "sheet": "decorations_and_hazards",
+      "rect": {
+        "x": 2344,
+        "y": 1892,
+        "w": 609,
+        "h": 402
+      },
+      "kind": "hazard",
+      "size": {
+        "w": 1,
+        "h": 1
+      },
+      "collision": false,
+      "anchor": "bottom"
+    },
+    "thorns_small_long": {
+      "sheet": "decorations_and_hazards",
+      "rect": {
+        "x": 3164,
+        "y": 1939,
+        "w": 740,
+        "h": 316
+      },
+      "kind": "hazard",
+      "size": {
+        "w": 1,
+        "h": 1
+      },
+      "collision": false,
+      "anchor": "bottom"
+    },
+    "trunk_a": {
+      "sheet": "decorations_and_hazards",
+      "rect": {
+        "x": 2113,
+        "y": 2566,
+        "w": 412,
+        "h": 1466
+      },
+      "kind": "decor",
+      "size": {
+        "w": 1,
+        "h": 3
+      },
+      "collision": false,
+      "anchor": "bottom"
+    },
+    "trunk_b": {
+      "sheet": "decorations_and_hazards",
+      "rect": {
+        "x": 2608,
+        "y": 2564,
+        "w": 427,
+        "h": 1473
+      },
+      "kind": "decor",
+      "size": {
+        "w": 1,
+        "h": 3
+      },
+      "collision": false,
+      "anchor": "bottom"
+    },
+    "trunk_c": {
+      "sheet": "decorations_and_hazards",
+      "rect": {
+        "x": 3109,
+        "y": 2561,
+        "w": 421,
+        "h": 1480
+      },
+      "kind": "decor",
+      "size": {
+        "w": 1,
+        "h": 3
+      },
+      "collision": false,
+      "anchor": "bottom"
+    },
+    "trunk_d": {
+      "sheet": "decorations_and_hazards",
+      "rect": {
+        "x": 3721,
+        "y": 2547,
+        "w": 247,
+        "h": 1503
+      },
+      "kind": "decor",
+      "size": {
+        "w": 1,
+        "h": 3
+      },
+      "collision": false,
+      "anchor": "bottom"
+    }
+  }
+}

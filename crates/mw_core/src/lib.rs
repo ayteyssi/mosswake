@@ -4,6 +4,7 @@
 
 pub mod assets;
 pub mod input;
+pub mod tileset;
 
 /// Crate name, used in logs.
 pub const CRATE: &str = "mw_core";
