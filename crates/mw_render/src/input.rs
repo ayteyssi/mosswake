@@ -20,6 +20,7 @@ impl Plugin for LocalInputPlugin {
         app.insert_resource(LocalInput {
             player: self.player,
             current: PlayerInput::default(),
+            held: 0,
             latched: 0,
         })
         .add_systems(PreUpdate, sample.after(bevy::input::InputSystems))
@@ -32,7 +33,9 @@ impl Plugin for LocalInputPlugin {
 pub struct LocalInput {
     pub player: PlayerId,
     pub current: PlayerInput,
-    /// Buttons pressed since the last tick.
+    /// Buttons physically held at the last sample.
+    held: u8,
+    /// Buttons pressed since the last tick (taps that may already be released).
     latched: u8,
 }
 
@@ -112,6 +115,7 @@ fn sample(keys: Res<ButtonInput<KeyCode>>, pads: Query<&Gamepad>, mut local: Res
         }
     }
     local.latched |= pressed;
+    local.held = held;
     local.current = PlayerInput {
         axis_x: quantize_axis(x),
         axis_y: quantize_axis(y),
@@ -121,9 +125,11 @@ fn sample(keys: Res<ButtonInput<KeyCode>>, pads: Query<&Gamepad>, mut local: Res
 
 fn hand_to_simulation(mut local: ResMut<LocalInput>, mut inputs: ResMut<TickInputs>) {
     inputs.0.insert(local.player, local.current);
-    // The tick has seen the taps; from now on only held buttons count.
-    local.current.buttons &= !local.latched;
+    // The tick has seen the taps: until the next sample only buttons still held count. (Do
+    // not subtract the latch: a button just pressed is both latched *and* held, and a frame
+    // running two ticks must keep it held for the second one.)
     local.latched = 0;
+    local.current.buttons = local.held;
 }
 
 #[cfg(test)]
@@ -138,6 +144,27 @@ mod tests {
         assert_eq!(quantize_axis(-1.0), -127);
         assert_eq!(quantize_axis(2.0), 127, "keyboard + pad saturate");
         assert_eq!(quantize_axis(0.5), 64);
+    }
+
+    /// Review of #39: a frame running two ticks must not "release" a held button.
+    #[test]
+    fn held_jump_stays_held_when_a_frame_runs_two_ticks() {
+        let mut app = App::new();
+        app.add_plugins(LocalInputPlugin {
+            player: PlayerId(0),
+        })
+        .init_resource::<TickInputs>()
+        .init_resource::<ButtonInput<KeyCode>>();
+        app.world_mut()
+            .resource_mut::<ButtonInput<KeyCode>>()
+            .press(KeyCode::Space);
+        app.world_mut().run_schedule(PreUpdate);
+        let mut seen = Vec::new();
+        for _ in 0..2 {
+            app.world_mut().run_schedule(FixedPreUpdate);
+            seen.push(app.world().resource::<TickInputs>().0[&PlayerId(0)].pressed(buttons::JUMP));
+        }
+        assert_eq!(seen, [true, true]);
     }
 
     #[test]

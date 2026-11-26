@@ -67,25 +67,10 @@ fn parse_args(args: &[String]) -> Result<PlayArgs> {
     Ok(play)
 }
 
-/// Repository root: `$MOSSWAKE_ROOT`, else the first ancestor of the current directory or
-/// of the executable that holds `assets/manifest.json`.
-fn find_root() -> Result<PathBuf> {
-    if let Ok(root) = std::env::var("MOSSWAKE_ROOT") {
-        return Ok(PathBuf::from(root));
-    }
-    let starts = [std::env::current_dir().ok(), std::env::current_exe().ok()];
-    starts
-        .into_iter()
-        .flatten()
-        .flat_map(|start| start.ancestors().map(Path::to_path_buf).collect::<Vec<_>>())
-        .find(|dir| dir.join("assets/manifest.json").is_file())
-        .context("cannot find the Mosswake assets (run from the repository or set MOSSWAKE_ROOT)")
-}
-
 /// Runs `mosswake play` with the arguments that follow `play`.
 pub fn run(args: &[String]) -> Result<()> {
     let play = parse_args(args)?;
-    let root = find_root()?;
+    let root = crate::find_root()?;
     let level_dir = if Path::new(&play.level).is_dir() {
         PathBuf::from(&play.level)
     } else {
@@ -235,7 +220,7 @@ mod tests {
 
     #[test]
     fn finds_the_repository_root() {
-        let root = find_root().unwrap();
+        let root = crate::find_root().unwrap();
         assert!(root.join("levels/tutorial/level.json").is_file());
     }
 }

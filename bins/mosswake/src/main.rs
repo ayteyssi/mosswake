@@ -38,7 +38,7 @@ fn parse_options(args: &[String], allow_name: bool) -> Result<Options> {
         level: String::new(),
         port: DEFAULT_PORT,
         max_players: 4,
-        levels_dir: PathBuf::from("levels"),
+        levels_dir: mosswake::default_levels_dir(),
         name: "Host".into(),
     };
     let mut args = args.iter();
