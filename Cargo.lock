@@ -1077,6 +1077,7 @@ version = "0.1.0"
 name = "mw_level"
 version = "0.1.0"
 dependencies = [
+ "mw_core",
  "serde",
  "serde_json",
  "tempfile",

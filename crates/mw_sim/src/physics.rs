@@ -5,7 +5,7 @@ use bevy::prelude::*;
 use serde::{Deserialize, Serialize};
 
 use crate::grid::{Aabb, CollisionGrid};
-use crate::{Rules, SimSet, TICK_DT};
+use crate::{mechanics::MobilityState, Rules, SimSet, TICK_DT};
 
 /// Position of a body's **feet** (bottom-center of its box), world units, y up.
 #[derive(Component, Debug, Clone, Copy, PartialEq, Default)]
@@ -51,11 +51,17 @@ pub(crate) fn plugin(app: &mut App) {
     .add_systems(FixedUpdate, update_contacts.in_set(SimSet::Collisions));
 }
 
-fn apply_gravity(rules: Res<Rules>, mut bodies: Query<(&Body, &mut Velocity)>) {
+pub(crate) fn apply_gravity(
+    rules: Res<Rules>,
+    mut bodies: Query<(&Body, &mut Velocity, Option<&MobilityState>)>,
+) {
     let dir = rules.gravity_dir();
     // Floating bodies (scale 0) are neither accelerated nor capped: max_fall_speed is a
     // terminal velocity, it only makes sense for bodies gravity acts on.
-    for (body, mut velocity) in bodies.iter_mut().filter(|(b, _)| b.gravity_scale != 0.0) {
+    for (body, mut velocity, mobility) in &mut bodies {
+        if body.gravity_scale == 0.0 || mobility.is_some_and(|m| m.is_dashing(&rules)) {
+            continue;
+        }
         velocity.0.y += rules.gravity * body.gravity_scale * TICK_DT;
         // Clamp only the speed along gravity; moving against it (jumps) is unbounded here.
         if velocity.0.y * dir > rules.max_fall_speed {
@@ -64,7 +70,7 @@ fn apply_gravity(rules: Res<Rules>, mut bodies: Query<(&Body, &mut Velocity)>) {
     }
 }
 
-fn move_and_collide(
+pub(crate) fn move_and_collide(
     grid: Option<Res<CollisionGrid>>,
     mut bodies: Query<(&Body, &mut Position, &mut Velocity)>,
 ) {
