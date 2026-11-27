@@ -86,6 +86,35 @@ retirer un pouvoir en cours de partie : plus de suspension de gravité ni de ver
 suivant. Les états d'animation restent ceux de `PlayerState` ; le rendu peut lire
 `MobilityState::is_dashing` pour choisir l'animation de dash.
 
+### Combat (`mw_sim::combat`)
+- `melee` est une mécanique enregistrée, optionnelle (`rules.mechanics`). `ATTACK` démarre un
+  coup sur un **nouvel appui** si le cooldown est terminé ; maintenir le bouton ne répète pas.
+  Axe Y positif : vers le haut logique (contre la gravité) ; négatif : vers le bas logique
+  (dans la gravité), uniquement en l'air. Sinon gauche/droite selon l'axe X ou `Facing`.
+- `Health { current, max, invincible_ticks, stun_ticks, knockback }`, `Hurtbox` (taille/offset
+  depuis les pieds), `MeleeState` (cooldown) et `Hitbox` (coup temporaire sur l'attaquant).
+  Les joueurs reçoivent leurs PV et hurtbox au spawn. Les ennemis de #8 pourront utiliser
+  les mêmes composants. Tous les paramètres viennent de `Rules`.
+- Le knockback est réappliqué **après Mechanics et avant Physics** pendant le hit-stun : les
+  mouvements ne peuvent pas l'annuler. Un impact ou pogo termine le dash/verrou mural actif
+  sans recharger les capacités consommées. Les impacts sont résolus **après les contacts**, puis
+  l'état d'animation est mis à jour. Les timers sont des entiers en ticks.
+- Les attaques/cibles sont triées par `SimId` ; un `BTreeSet` mémorise les cibles touchées une
+  fois pendant le coup. Les joueurs ne sont pas des cibles de mêlée avant #17 (PvP).
+- Un coup vers le bas sur un ennemi vivant, une tile `hazard`, ou une entité `PogoSurface` +
+  `Hurtbox`, rebondit une seule fois par coup à `pogo_speed` contre la gravité. Le rebond
+  n'est pas coupé par le relâchement du saut. Les dégâts des hazards restent dans #9.
+- `DamageQueue(Vec<DamageEvent { target, source: Option<SimId>, amount }>)` reçoit les
+  demandes des autres systèmes avant les collisions (`None` = environnement). La file est
+  drainée dans l'ordre `(target, source, amount)` ; quantité nulle, cible absente/morte ou
+  invincible : aucun effet. Les PV utilisent une soustraction saturée.
+- `CombatEvents { damage, deaths }` contient les impacts acceptés et `DeathEvent` du tick,
+  consultables dans `ScriptPost`, puis effacés au prochain passage Collisions. Une mort est
+  émise une seule fois ; le corps et `Health.current = 0` restent pour les hooks/respawn de #9.
+  Un mort ne peut plus attaquer. Les hooks Rhai viendront dans #19.
+- `BodySnapshot.combat` transporte PV, timers, hurtbox, cooldown, coup courant (dont les
+  cibles déjà touchées) et marqueur pogo. L'encodage change : **protocole v3**, incluant la mobilité de #6.
+
 ## Scripting (`mw_script`)
 - Moteur **Rhai** créé par niveau (`mw_script::ScriptHost`), sans dépendance à l'ECS. Bac à sable **par construction** :
   features `no_module` (pas d'`import` ni de fichier) et `no_time` (pas d'horloge), `eval` désactivé,
@@ -114,7 +143,23 @@ suivant. Les états d'animation restent ceux de `PlayerState` ; le rendu peut li
 
 ## Rendu (`mw_render`)
 - Lit l'état de la sim, n'écrit jamais dedans. Sprites animés (frames PNG, voir `assets/manifest.json`),
-  tilemap, caméra qui suit, parallax, plantes animées décoratives, HUD.
+  tilemap, caméra qui suit, parallax, plantes animées décoratives, HUD (#11).
+- `ClientRenderPlugin::new(assets_root, joueur_suivi)` charge le manifest et l'atlas ; il ajoute ses
+  propres composants (sprite, transform…) aux entités de la sim, sans toucher aux composants de gameplay.
+- **Décisions pures dans `mw_render::layout`** (testées sans GPU) : pièce d'atlas par cellule
+  (autotiling, voisins = même id de légende, hors niveau = plein), emplacements des plantes, ancrage
+  depuis le pivot, bornes de caméra. Un id de légende inconnu de l'atlas est dessiné en placeholder magenta.
+- **Textures réduites au chargement** (`textures.rs`) à ~64 px/tile avant l'envoi au GPU (÷16 en VRAM,
+  pas de scintillement sans mipmaps) ; seuls les sprites utilisés sont chargés.
+- **Interpolation** : `PrevPosition` mémorisée en `FixedPreUpdate`, affichage à
+  `lerp(prev, position, overstep_fraction)` : mouvement fluide à toute fréquence d'écran.
+- Caméra orthographique de 15 tiles de haut, suivi exponentiel (plus souple en vertical), bornée au niveau.
+  Parallax : `pos = base + caméra × facteur` (0 = fixe dans le monde, 1 = fixe à l'écran), silhouettes
+  translucides pour l'effet de profondeur.
+- Entrées (`LocalInputPlugin`) : clavier + manette → `PlayerInput`, appuis brefs entre deux ticks
+  mémorisés jusqu'au tick suivant. Clavier : A/D ou ←/→, Espace/K/Z saut, Maj/L/X dash, J/C attaque,
+  E/↑ interagir. Manette : stick gauche/croix, Sud saut, Est/gâchette droite dash, Ouest attaque.
+- En attendant #8, les entités placées par le niveau (slimes) sont dessinées à leur position de départ.
 
 ## Éditeur (`mw_editor`) et MCP (`mosswake-mcp`)
 - Les deux manipulent un `mw_level::Level` et passent par la **même validation**.
