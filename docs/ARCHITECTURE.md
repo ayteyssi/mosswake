@@ -136,7 +136,23 @@ suivant. Les états d'animation restent ceux de `PlayerState` ; le rendu peut li
 
 ## Rendu (`mw_render`)
 - Lit l'état de la sim, n'écrit jamais dedans. Sprites animés (frames PNG, voir `assets/manifest.json`),
-  tilemap, caméra qui suit, parallax, plantes animées décoratives, HUD.
+  tilemap, caméra qui suit, parallax, plantes animées décoratives, HUD (#11).
+- `ClientRenderPlugin::new(assets_root, joueur_suivi)` charge le manifest et l'atlas ; il ajoute ses
+  propres composants (sprite, transform…) aux entités de la sim, sans toucher aux composants de gameplay.
+- **Décisions pures dans `mw_render::layout`** (testées sans GPU) : pièce d'atlas par cellule
+  (autotiling, voisins = même id de légende, hors niveau = plein), emplacements des plantes, ancrage
+  depuis le pivot, bornes de caméra. Un id de légende inconnu de l'atlas est dessiné en placeholder magenta.
+- **Textures réduites au chargement** (`textures.rs`) à ~64 px/tile avant l'envoi au GPU (÷16 en VRAM,
+  pas de scintillement sans mipmaps) ; seuls les sprites utilisés sont chargés.
+- **Interpolation** : `PrevPosition` mémorisée en `FixedPreUpdate`, affichage à
+  `lerp(prev, position, overstep_fraction)` : mouvement fluide à toute fréquence d'écran.
+- Caméra orthographique de 15 tiles de haut, suivi exponentiel (plus souple en vertical), bornée au niveau.
+  Parallax : `pos = base + caméra × facteur` (0 = fixe dans le monde, 1 = fixe à l'écran), silhouettes
+  translucides pour l'effet de profondeur.
+- Entrées (`LocalInputPlugin`) : clavier + manette → `PlayerInput`, appuis brefs entre deux ticks
+  mémorisés jusqu'au tick suivant. Clavier : A/D ou ←/→, Espace/K/Z saut, Maj/L/X dash, J/C attaque,
+  E/↑ interagir. Manette : stick gauche/croix, Sud saut, Est/gâchette droite dash, Ouest attaque.
+- En attendant #8, les entités placées par le niveau (slimes) sont dessinées à leur position de départ.
 
 ## Éditeur (`mw_editor`) et MCP (`mosswake-mcp`)
 - Les deux manipulent un `mw_level::Level` et passent par la **même validation**.
