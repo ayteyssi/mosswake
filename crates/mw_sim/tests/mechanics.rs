@@ -417,7 +417,7 @@ fn snapshot_restores_mid_ability_state_for_exact_replay() {
         let (mut server, _) = spawn(&level, 1);
         server.step(3, &input(-127, held));
         let checkpoint = server.snapshot();
-        let body = checkpoint.bodies[0];
+        let body = &checkpoint.bodies[0];
         let player = body.player.unwrap();
         let (mut client, _) = spawn(&level, 1);
         let world = client.world_mut();
