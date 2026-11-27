@@ -21,7 +21,14 @@ pub struct CameraTarget(pub PlayerId);
 /// Look slightly above the feet.
 const LOOK_UP_TILES: f32 = 1.0;
 
-pub(crate) fn spawn_camera(mut commands: Commands, level: Res<LoadedLevel>) {
+pub(crate) fn spawn_camera(
+    mut commands: Commands,
+    level: Res<LoadedLevel>,
+    existing: Query<(), With<Camera2d>>,
+) {
+    if !existing.is_empty() {
+        return; // a later level reuses the camera
+    }
     let ts = level.0.tile_size as f32;
     commands.spawn((
         Camera2d,

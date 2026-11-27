@@ -4,12 +4,14 @@
 //! [`Channel`], so callers never pick one by hand.
 
 use mw_core::input::{PlayerId, PlayerInput};
+
+use crate::transfer::LevelOffer;
 use renet::{ChannelConfig, ConnectionConfig, SendType};
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use std::time::Duration;
 
 /// Version of the messages below. Checked at connection (see [`crate::handshake`]).
-pub const PROTOCOL_VERSION: u32 = 3;
+pub const PROTOCOL_VERSION: u32 = 4;
 
 /// Delivery class of a message. Channel ids are the same in both directions.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -37,6 +39,10 @@ pub enum ClientMessage {
         first_tick: u64,
         inputs: Vec<PlayerInput>,
     },
+    /// Answer to [`ServerMessage::LevelOffer`] when the level is not cached: send the chunks.
+    LevelRequest { transfer: u32 },
+    /// The offered level is loaded: the server can spawn our player.
+    LevelReady { transfer: u32 },
 }
 
 /// Messages from the server to clients.
@@ -54,6 +60,15 @@ pub enum ServerMessage {
     /// World state at `tick`: `data` is a `mw_sim::Snapshot` encoded with [`encode`] (this
     /// crate does not depend on the simulation). See docs/NETCODE.md.
     Snapshot { tick: u64, data: Vec<u8> },
+    /// The level to play (on connection and on every level change). The client answers
+    /// `LevelRequest` to download it or, if cached, `LevelReady`. See [`crate::transfer`].
+    LevelOffer(LevelOffer),
+    /// Part `index` of the offered level package.
+    LevelChunk {
+        transfer: u32,
+        index: u32,
+        data: Vec<u8>,
+    },
 }
 
 /// A connected player.
@@ -78,6 +93,7 @@ impl ClientMessage {
     pub fn channel(&self) -> Channel {
         match self {
             Self::Inputs { .. } => Channel::Unreliable,
+            Self::LevelRequest { .. } | Self::LevelReady { .. } => Channel::Reliable,
         }
     }
 }
@@ -86,7 +102,11 @@ impl ServerMessage {
     pub fn channel(&self) -> Channel {
         match self {
             Self::Snapshot { .. } => Channel::Unreliable,
-            Self::Roster(_) | Self::PlayerJoined(_) | Self::PlayerLeft { .. } => Channel::Reliable,
+            Self::Roster(_)
+            | Self::PlayerJoined(_)
+            | Self::PlayerLeft { .. }
+            | Self::LevelOffer(_)
+            | Self::LevelChunk { .. } => Channel::Reliable,
         }
     }
 }

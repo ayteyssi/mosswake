@@ -79,8 +79,7 @@ pub(crate) fn plugin(app: &mut App) {
                     .in_set(MechanicSet::Movement)
                     .run_if(mechanic_active(MOVEMENT)),
                 jump.in_set(MechanicSet::Jump).run_if(mechanic_active(JUMP)),
-            )
-                .in_set(SimSet::Mechanics),
+            ),
         )
         .add_systems(
             FixedUpdate,
