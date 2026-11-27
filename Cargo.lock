@@ -3931,6 +3931,7 @@ dependencies = [
  "mw_net",
  "mw_render",
  "mw_sim",
+ "tempfile",
 ]
 
 [[package]]
@@ -3997,6 +3998,8 @@ dependencies = [
  "renet",
  "renet_netcode",
  "serde",
+ "sha2",
+ "tempfile",
  "thiserror 2.0.21",
 ]
 

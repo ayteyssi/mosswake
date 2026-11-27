@@ -91,6 +91,11 @@ impl NetClient {
         &self.state
     }
 
+    /// Round-trip time estimated by the transport (zero before any measurement).
+    pub fn rtt(&self) -> std::time::Duration {
+        std::time::Duration::from_secs_f64(self.client.rtt().max(0.0))
+    }
+
     /// Our player id once accepted.
     pub fn player(&self) -> Option<PlayerId> {
         match self.state {

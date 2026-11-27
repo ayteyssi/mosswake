@@ -7,7 +7,7 @@ encore implémentées sont signalées par leur issue.
 ## Vue d'ensemble
 - Transport : UDP via `renet` (canaux, fiabilité) sur `renet_netcode` (connexions, timeouts).
   Port de jeu par défaut **47800** (`DEFAULT_PORT`), découverte LAN en broadcast sur **47801**
-  (`DISCOVERY_PORT`, #15).
+  (`DISCOVERY_PORT`, voir *Découverte LAN*).
 - Mode **non sécurisé** de netcode (pas de jeton signé ni de clé) : jeu en réseau local de confiance.
 - Serveur autoritaire, tick 60 Hz, snapshots 30 Hz, prédiction client + réconciliation,
   interpolation ~100 ms (#14).
@@ -20,7 +20,7 @@ Mêmes identifiants dans les deux sens ; chaque message connaît son canal (`mes
 | Canal | Garantie | Client → serveur | Serveur → client |
 |---|---|---|---|
 | `Unreliable` (0) | aucune, le suivant remplace | `Inputs` | `Snapshot` |
-| `Reliable` (1) | fiable et ordonné | (contrôle, à venir) | réponse de handshake, `Roster`, `PlayerJoined`, `PlayerLeft` |
+| `Reliable` (1) | fiable et ordonné | `LevelRequest`, `LevelReady` | réponse de handshake, `Roster`, `PlayerJoined`, `PlayerLeft`, `LevelOffer`, `LevelChunk` |
 
 ## Connexion et versions
 Problème : pour refuser proprement un client d'une autre version, il faut lui envoyer un message
@@ -55,6 +55,80 @@ Version actuelle : **2** (ajout de `PlayerSnapshot::mobility` par #6 ; un client
 - `TIMEOUT` = **15 s**, imposé par renetcode en mode non sécurisé.
 - Inputs : `Inputs { first_tick, inputs }` porte les derniers ticks (redondance contre la perte),
   voir « Application des inputs ».
+
+## Transfert du niveau (#16)
+Les clients n'ont pas forcément le niveau (niveaux créés par IA) : le serveur l'envoie.
+1. **Paquet** : `LevelBundle::to_package()` (`mw_level`) = JSON canonique `{level, scripts}`. Un même
+   niveau donne les mêmes octets sur tout serveur, donc le même hash. Au déballage, les chemins
+   de scripts sont revalidés (un serveur ne peut pas faire écrire hors de `scripts/`) et le schéma
+   est migré.
+2. **Offre** (fiable) : à chaque connexion, et à chaque changement de niveau pour tous,
+   `LevelOffer { transfer, hash (SHA-256), size, chunks }`. `transfer` augmente à chaque niveau :
+   les messages qui portent un ancien numéro sont ignorés.
+3. Le client (`mosswake::level_sync::LevelSync`) regarde son **cache** (`LevelCache`, optionnel,
+   `<dir>/<hash>.mwlevel`, relu et revérifié) :
+   - présent : il charge et répond `LevelReady` (aucun téléchargement) ;
+   - absent : `LevelRequest`, le serveur envoie `LevelChunk { transfer, index, data }` (16 Kio
+     chacun, fiables). `mw_net::Assembler` reconstitue dans n'importe quel ordre, refuse les offres
+     incohérentes ou > **4 Mio** et vérifie le **hash**. Le client met en cache, charge, valide le
+     niveau, puis répond `LevelReady`.
+4. Le serveur ne fait apparaître le joueur **qu'à réception de `LevelReady`**. Avant cela, le
+   joueur est connecté mais absent du monde, et le client ignore les snapshots.
+5. `ServerSession::change_level(bundle)` : nouvelle simulation, nouvelle offre à tous ; chacun
+   réapparaît en ayant chargé le nouveau niveau.
+
+Les scripts sont transmis avec le niveau mais **jamais exécutés côté client** (ils tournent sur
+le serveur). Le mode `host` passe par le même chemin : son client local télécharge le niveau en
+loopback comme un joueur distant.
+
+## Découverte LAN (#15)
+Rejoindre sans taper d'IP. `mw_net::discovery` :
+- Chaque `server` / `host` (sauf `--no-announce`) **diffuse toutes les secondes** une `Announcement`
+  en broadcast UDP sur le port **47801** : version du protocole, port de jeu, nom de la partie
+  (`--name`), niveau, joueurs connectés / max.
+- Datagramme au **format gelé** : `b"MWLN"` + postcard de `Announcement`, avec la version en premier
+  champ et des ajouts seulement en fin. Toute version liste toute partie et indique si elle est
+  **incompatible**, au lieu de ne pas la voir. Les octets en trop (champs futurs) sont tolérés ;
+  les datagrammes étrangers ou abusifs (> 512 octets, textes > 48 octets ou avec caractères de
+  contrôle) sont ignorés. Côté émetteur, nom et niveau passent par `discovery::announceable`
+  (troncature UTF-8 à 48 octets, contrôles retirés) : un nom long raccourcit l'annonce au lieu de
+  rendre la partie invisible. Ce n'est pas un message de jeu : il ne fait pas varier `PROTOCOL_VERSION`.
+- `Browser` écoute le port, garde une partie par adresse (IP de l'émetteur + port annoncé) et
+  l'oublie après **3 s** de silence (temps passé explicitement à `update(dt)`).
+- `mosswake lan [--seconds 3]` affiche les parties entendues (adresse, nom, niveau, joueurs,
+  open / full / incompatible).
+- Réseaux qui filtrent le broadcast : `ServerSession::announce_to(adresses)`.
+
+Le menu graphique (Héberger / Rejoindre) est suivi par **#49** (le client rendu, #14, est `mosswake join`).
+
+## Prédiction, réconciliation, interpolation (#14)
+`mosswake::client::ClientSession` (utilisée par `mosswake join`) :
+- **Prédiction** : le joueur local est simulé **tout de suite** par une copie locale de `mw_sim`
+  avec ses propres inputs. Aucune attente du serveur : le personnage répond au premier tick.
+- **Réconciliation** : chaque snapshot fait autorité. `Snapshot::restore` remet la sim locale dans
+  l'état du serveur **au bit près** (testé : restaurée puis nourrie des mêmes inputs, elle reste
+  identique au serveur). Les inputs non encore couverts par un snapshot sont ensuite **rejoués** par
+  dessus. Une erreur de prédiction est ainsi corrigée dès le snapshot suivant
+  (`last_correction` la mesure). Les autres joueurs sont prédits en répétant leur dernier input connu.
+- **Interpolation** : les autres joueurs sont **affichés** `INTERPOLATION_DELAY_TICKS` (6 ticks =
+  100 ms) dans le passé, entre les deux snapshots qui encadrent cet instant. C'est fluide, même
+  quand un snapshot est perdu, et jamais extrapolé.
+- Le rendu reste celui du solo : chaque tick, la vue de la session est recopiée dans des entités
+  (`Player`, `Position`, `PlayerState`, `Facing`, `MobilityState`) que `mw_render` dessine.
+
+### Simulation de latence et de pertes
+`mw_net::LinkConditioner` est un proxy UDP qui ajoute latence (par sens), gigue et pertes, avec une
+graine pour des résultats reproductibles. Chaque client a sa propre socket amont, donc le serveur voit
+des adresses distinctes. En temps logique pour les tests, en temps réel pour l'outil :
+```sh
+mosswake server --headless --level tutorial --port 47800
+mosswake proxy --to 127.0.0.1:47800 --port 47810 --latency 50 --jitter 5 --loss 2
+mosswake join 127.0.0.1:47810 --name Ayla
+```
+Test (`bins/mosswake/tests/prediction.rs`) avec **100 ms par sens**, 10 ms de gigue et 5 % de pertes :
+le joueur prédit bouge dès le 1er tick alors que le serveur n'a encore rien reçu ; au repos, la
+position prédite rejoint **exactement** celle du serveur (pas de divergence durable) ; un second
+client voit le premier, interpolé, à la position du serveur.
 
 ## Utilisation
 Boucle par frame, avec le temps écoulé passé explicitement (aucune lecture d'horloge interne,
@@ -114,9 +188,11 @@ mosswake host --level <id> [--port 47800] [--name Host] [--max-players 4] [--lev
 - Le client vise `tick du dernier snapshot + INPUT_LEAD_TICKS` (3 ticks = 50 ms), puis +1 par
   tick. **Sans cette avance, la redondance ne sert à rien** : les copies arriveraient toujours après
   leur tick. Avec elle, jusqu'à 2 messages perdus d'affilée ne coûtent rien (testé avec 2 messages
-  sur 3 perdus). Prix : 50 ms de délai sur les réactions du joueur, que la prédiction client (#14)
-  masquera ; #14 remplacera aussi cette estimation par une vraie synchronisation qui tient compte
-  de la latence.
+  sur 3 perdus). Le délai que cela introduit est masqué par la prédiction client (voir plus bas).
+- **Latence** : un snapshot a déjà une demi-RTT de retard en arrivant, et l'input mettra une autre
+  demi-RTT à atteindre le serveur. Le client vise donc `dernier snapshot + RTT + INPUT_LEAD_TICKS`,
+  avec la RTT mesurée par le transport (`NetClient::rtt`, `InputSender::set_rtt_ticks`). Sinon, ses
+  inputs arriveraient périmés et le serveur répéterait l'input précédent à leur place.
 - Si le client se retrouve plus de `RESYNC_AHEAD_TICKS` (30) ticks en avance sur le dernier snapshot
   (serveur figé, horloges qui dérivent), il se recale : sinon il dériverait jusqu'à ce que le serveur
   ignore tous ses inputs comme trop en avance.
