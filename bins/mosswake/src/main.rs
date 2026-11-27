@@ -1,13 +1,14 @@
 //! Mosswake entry point.
 //!
 //! ```text
+//! mosswake play <level> [--autoplay] [--screenshot <file.png> [--at <seconds>]]
 //! mosswake server --headless --level <id> [--port <port>] [--name <name>] [--max-players <n>] [--levels-dir <dir>] [--no-announce]
 //! mosswake host --level <id> [--port <port>] [--name <name>] [--max-players <n>] [--levels-dir <dir>] [--no-announce]
 //! mosswake lan [--seconds <s>] [--port <port>]
 //! ```
 //! `server` and `host` announce themselves on the LAN unless `--no-announce`; `lan` lists
 //! the games it hears.
-//! Still to come: `mosswake join <addr>` (#14, #15) and `mosswake edit <level>` (#23).
+//! Still to come: `mosswake join <addr>` (#14), the main menu (#49) and `mosswake edit` (#23).
 
 use std::net::{Ipv4Addr, SocketAddr};
 use std::path::PathBuf;
@@ -22,6 +23,7 @@ use mw_core::input::PlayerInput;
 use mw_net::{ServerNetEvent, DEFAULT_PORT};
 
 const USAGE: &str = "usage:
+  mosswake play <level> [--autoplay] [--screenshot <file.png> [--at <seconds>]]
   mosswake server --headless --level <id> [--port <port>] [--name <name>] [--max-players <n>] [--levels-dir <dir>] [--no-announce]
   mosswake host --level <id> [--port <port>] [--name <name>] [--max-players <n>] [--levels-dir <dir>] [--no-announce]
   mosswake lan [--seconds <s>] [--port <port>]";
@@ -42,7 +44,7 @@ fn parse_options(args: &[String], default_name: &str) -> Result<Options> {
         level: String::new(),
         port: DEFAULT_PORT,
         max_players: 4,
-        levels_dir: PathBuf::from("levels"),
+        levels_dir: mosswake::default_levels_dir(),
         name: default_name.into(),
         announce: true,
     };
@@ -137,8 +139,8 @@ fn host(args: &[String]) -> Result<()> {
     let mut session = HostSession::new(&level, config(&options), &options.name)?;
     announce(&options, |name| session.server().announce_on_lan(name));
     println!(
-        "mosswake host: level `{}` on {} — rendering is not implemented yet (#10), \
-         the local player stands still",
+        "mosswake host: level `{}` on {} — host mode is not rendered yet (#14; solo \
+         rendering: `mosswake play`), the local player stands still",
         level.id,
         session.server().local_addr()
     );
@@ -215,6 +217,7 @@ fn main() -> Result<()> {
         Some("server") => server(&args[1..]),
         Some("host") => host(&args[1..]),
         Some("lan") => lan(&args[1..]),
+        Some("play") => mosswake::play::run(&args[1..]),
         Some("--version") => {
             println!("mosswake {}", env!("CARGO_PKG_VERSION"));
             Ok(())
