@@ -398,7 +398,7 @@ fn apply(world: &mut World, outcome: HookOutcome) {
             ScriptCommand::Heal { id, amount } => find(world, id)
                 .and_then(|e| world.get_mut::<Health>(e))
                 .map(|mut h| {
-                    let healed = i64::from(h.current) + amount.max(0);
+                    let healed = i64::from(h.current).saturating_add(amount.max(0));
                     h.current = healed.min(i64::from(h.max)) as u32;
                 })
                 .map_or(Some(format!("no damageable body {id}")), |_| None),
@@ -471,11 +471,17 @@ fn set_rule(world: &mut World, key: &str, value: serde_json::Value) -> Option<St
     None
 }
 
+/// Smallest side of a spawned entity, in tiles.
+const MIN_SIZE_TILES: f32 = 1.0 / 16.0;
+
+/// A finite numeric prop, or `default`.
 fn prop_f32(props: &serde_json::Value, key: &str, default: f32) -> f32 {
     props
         .get(key)
         .and_then(serde_json::Value::as_f64)
-        .map_or(default, |v| v as f32)
+        .map(|v| v as f32)
+        .filter(|v| v.is_finite())
+        .unwrap_or(default)
 }
 
 /// Spawns a script or level entity at `feet` (world units). `props`: `w`, `h` (tiles,
@@ -483,7 +489,17 @@ fn prop_f32(props: &serde_json::Value, key: &str, default: f32) -> f32 {
 /// all of them are also kept as the entity's variables.
 pub fn spawn_entity(world: &mut World, kind: &str, feet: Vec2, props: &serde_json::Value) -> SimId {
     let ts = tile_size(world);
-    let size = Vec2::new(prop_f32(props, "w", 1.0), prop_f32(props, "h", 1.0)) * ts;
+    // Bounded by the level: collision cost grows with the cells a body covers, so a
+    // script must not be able to create a body millions of tiles wide.
+    let (max_w, max_h) = world
+        .get_resource::<LoadedLevel>()
+        .map_or((64.0, 64.0), |l| {
+            (l.0.size.w.max(1) as f32, l.0.size.h.max(1) as f32)
+        });
+    let size = Vec2::new(
+        prop_f32(props, "w", 1.0).clamp(MIN_SIZE_TILES, max_w),
+        prop_f32(props, "h", 1.0).clamp(MIN_SIZE_TILES, max_h),
+    ) * ts;
     let id = world.resource_mut::<SimIds>().allocate();
     let vars = ScriptVars(
         props
@@ -521,7 +537,8 @@ pub fn spawn_entity(world: &mut World, kind: &str, feet: Vec2, props: &serde_jso
         vars,
     ));
     if let Some(hp) = props.get("hp").and_then(serde_json::Value::as_u64) {
-        entity.insert((Health::new(hp as u32), Hurtbox::from_size(size)));
+        let hp = u32::try_from(hp).unwrap_or(u32::MAX).max(1);
+        entity.insert((Health::new(hp), Hurtbox::from_size(size)));
     }
     id
 }

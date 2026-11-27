@@ -137,6 +137,10 @@ script lui-même. Les écritures deviennent des commandes appliquées à la fin 
 | `e.despawn()` | Retire le corps |
 | `a == b` | Même id |
 
+Les nombres écrits (`x`, `vx`, `teleport`, `spawn_entity`…) doivent être **finis** : NaN ou
+l'infini donne une erreur d'exécution du script. Les vitesses énormes sont arrêtées par les murs
+invisibles du niveau.
+
 Un id disparu (corps despawné entre-temps) ne fait pas d'erreur : la commande est refusée et notée
 dans `ScriptLog.rejected`.
 ```rhai
@@ -147,7 +151,7 @@ fn on_tick(dt) {
 }
 ```
 Tests : `entities_read_the_view_and_write_commands`, `entity_api_moves_damages_heals_tags_and_spawns`,
-`despawn_and_unknown_ids_are_handled`.
+`despawn_and_unknown_ids_are_handled`, `hostile_values_cannot_corrupt_or_stall_the_simulation`.
 
 ### `players()` · `entities()` · `entity(id)` · `entities_with_tag(tag)`
 Tableaux d'`Entity` triés par id (`entity` renvoie `()` si l'id n'existe pas). `entities()` contient
@@ -156,7 +160,7 @@ Tests : `entities_read_the_view_and_write_commands`, `despawn_and_unknown_ids_ar
 
 ### `spawn_entity(kind, x, y)` · `spawn_entity(kind, x, y, props)`
 Crée une entité de type `kind` (chaîne libre), pieds en `(x, y)` tiles. `props` : `w`, `h` (taille
-en tiles, défaut 1), `gravity` (échelle, défaut 1 ; 0 = flotte), `hp` (la rend vulnérable), `name`
+en tiles, défaut 1, bornée à `[1/16, taille du niveau]`), `gravity` (échelle, défaut 1 ; 0 = flotte), `hp` (la rend vulnérable), `name`
 (pour `kind = "trigger"`). Toutes les `props` deviennent aussi ses variables (`e.get`). Son id
 n'existe qu'à l'application de la commande : on la retrouve ensuite avec `entities()`. (`spawn` est un
 mot réservé de Rhai, d'où le nom.)

@@ -115,14 +115,21 @@ pub fn json_to_dynamic(value: &serde_json::Value) -> Dynamic {
     }
 }
 
+/// A finite number from an integer or a float: NaN or infinite positions would corrupt the
+/// simulation, so they are script errors.
 fn to_float(value: &Dynamic) -> Result<f64, Box<EvalAltResult>> {
-    if let Some(f) = value.clone().try_cast::<rhai::FLOAT>() {
-        return Ok(f);
+    let number = if let Some(f) = value.clone().try_cast::<rhai::FLOAT>() {
+        f
+    } else if let Some(i) = value.clone().try_cast::<INT>() {
+        i as f64
+    } else {
+        return Err(format!("expected a number, got {}", value.type_name()).into());
+    };
+    if number.is_finite() {
+        Ok(number)
+    } else {
+        Err(format!("expected a finite number, got {number}").into())
     }
-    if let Some(i) = value.clone().try_cast::<INT>() {
-        return Ok(i as f64);
-    }
-    Err(format!("expected a number, got {}", value.type_name()).into())
 }
 
 /// Registers the `Entity` type and the world functions on `engine`.
@@ -249,7 +256,7 @@ pub(crate) fn register(engine: &mut Engine, shared: &Shared) {
         )
         .register_fn("heal", |e: &mut Entity, amount: INT| {
             if let Some((hp, max)) = e.data.hp.as_mut() {
-                *hp = (*hp + amount.max(0)).min(*max);
+                *hp = hp.saturating_add(amount.max(0)).min(*max);
             }
             e.emit(ScriptCommand::Heal {
                 id: e.data.id,

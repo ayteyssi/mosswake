@@ -386,3 +386,40 @@ fn script_errors_are_reported_without_stopping_the_game() {
     assert_eq!(log(&sim).errors.len(), 1);
     assert_eq!(int(&state(&sim), "n"), 5, "later ticks still run");
 }
+
+#[test]
+fn hostile_values_cannot_corrupt_or_stall_the_simulation() {
+    let mut sim = sim(r#"
+        fn on_player_spawn(p) {
+            spawn_entity("wall", 2, 2, #{ w: 1e12, h: -3, gravity: 1e300, hp: 99999999999 });
+            p.heal(9223372036854775807);
+            p.vx = 1e30;                  // bounded by the level's invisible walls
+        }
+        fn on_tick(dt) {
+            if state.nan == () { state.nan = true; for p in players() { p.x = 0.0 / 0.0; } }
+        }"#);
+    let player = sim.spawn_player(PlayerId(0));
+    step(&mut sim, 3);
+    let wall = sim
+        .world_mut()
+        .query::<(&EntityKind, &Body, &Health)>()
+        .iter(sim.world())
+        .find(|(k, ..)| k.0 == "wall")
+        .map(|(_, b, h)| (b.size, b.gravity_scale, h.max))
+        .expect("wall spawned");
+    assert_eq!(
+        wall.0,
+        Vec2::new(40.0 * TS, TS / 16.0),
+        "clamped to the level, minimum side"
+    );
+    assert_eq!(wall.1, 1.0, "infinite gravity scale ignored");
+    assert_eq!(wall.2, u32::MAX);
+    assert_eq!(
+        get::<Health>(&mut sim, player).unwrap().current,
+        5,
+        "heal saturates"
+    );
+    let x = sim.body(player).position.x;
+    assert!(x.is_finite() && x <= 40.0 * TS, "{x}");
+    assert_eq!(log(&sim).errors.len(), 1, "NaN position is a script error");
+}
