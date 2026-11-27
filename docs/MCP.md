@@ -22,7 +22,10 @@ Le serveur peut créer le dossier `levels` ; l'atlas doit déjà exister.
 
 Tous les outils renvoient du JSON dans `structuredContent` ainsi qu'un contenu texte MCP.
 Les erreurs de manipulation donnent `isError: true` et `{ "error": "message" }`.
-Les erreurs de validation incluent les codes de `mw_level` (voir `LEVEL_FORMAT.md`).
+Les erreurs de validation incluent les codes de `mw_level` (voir `LEVEL_FORMAT.md`), dont
+`unknown_tile_id` : chaque id de légende doit exister dans l'atlas (familles de terrain ou pièces,
+exactement ce que liste `list_palette`). Vérifié à chaque écriture (refusée sans rien modifier),
+par `list_levels`, `get_level` et `validate_level`.
 
 | Outil | Arguments / résultat |
 |---|---|

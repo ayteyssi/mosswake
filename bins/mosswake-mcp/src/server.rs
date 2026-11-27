@@ -396,11 +396,11 @@ impl LevelServer {
     }
 
     #[tool(
-        description = "Return all mw_level validation errors (structured code fields), including missing scripts. No files are modified. This checks level structure, not Rhai syntax or gameplay rule keys/types."
+        description = "Return all mw_level validation errors (structured code fields), including missing scripts. No files are modified. This checks level structure and that every legend id exists in the tileset atlas (`unknown_tile_id`), not Rhai syntax or gameplay rule keys/types."
     )]
     pub fn validate_level(&self, Parameters(args): Parameters<LevelId>) -> CallToolResult {
         self.run(|store| {
-            let errors = store.load(&args.id)?.validate();
+            let errors = store.validate(&store.load(&args.id)?);
             Ok(json!({"valid":errors.is_empty(), "errors":errors}))
         })
     }
