@@ -33,7 +33,7 @@ par `list_levels`, `get_level` et `validate_level`.
 | `list_palette` | Sans arguments. `entity_kinds`, ids de `terrains`, et `pieces` de l'atlas avec type, taille et collision. |
 | `create_level` | `id`, `name`, `width`, `height`, `spawns?`. Crée un calque `ground` solide vide. Spawn par défaut `(0.5, 0)`. Refuse d'écraser un niveau existant. |
 | `get_level` | `id`. JSON complet, `grids_top_to_bottom` lisibles et `indexed_entities` pour identifier les entités à supprimer. |
-| `set_tiles` | `id`, `layer`, `x`, `y`, `width`, `height`, `tile`, `tile_id?`, `kind?`. Remplit un rectangle ; hauteur/largeur 1 pour une ligne. `.` gomme. `tile_id` associe le caractère à un id de palette. Un nouveau calque nécessite `kind` (`solid`, `decor`, `hazard`). |
+| `set_tiles` | `id`, `layer`, `x`, `y`, `width`, `height`, `tile`, `tile_id?`, `kind?`. Remplit un rectangle ; hauteur/largeur 1 pour une ligne. `.` gomme. `tile_id` associe le caractère à un id de palette. Un nouveau calque nécessite `kind` (`solid`, `platform`, `decor`, `hazard`). `platform` permet les plateformes traversables par dessous (face inversée avec gravité inversée). |
 | `place_entity` | `id`, `kind`, `x`, `y`, `props?` (objet). Ajoute une entité, renvoie son `index`. |
 | `remove_entity` | `id`, `index`. Supprime par index, **les indices suivants se décalent** : relire après suppression. |
 | `set_rules` | `id`, `rules` (objet), `replace?` (défaut faux). Fusionne les clés ou remplace toutes les surcharges. |
@@ -83,6 +83,11 @@ puis publiées par remplacement atomique de **chaque fichier** ; les scripts pr�
 un répertoire temporaire par un seul renommage. Une mise à jour de plusieurs fichiers n'est pas
 une transaction globale en cas d'erreur disque pendant les renommages. Éviter plusieurs
 instances d'édition sur le même dossier : le verrou sérialise les appels d'une instance seulement.
+
+Sous Unix, remplacer un fichier conserve ses bits de permissions existants (par exemple
+0644, 0640 ou 0600), appliqués au temporaire avant d'y écrire. Les nouveaux fichiers suivent
+une création ordinaire : 0666 filtré par l'umask du processus. Les répertoires conservent leur
+comportement habituel (0777 filtré par l'umask). Le serveur ne modifie jamais l'umask.
 
 Le JSON sauvegardé est canonique (`mw_level`). Les anciens scripts non référencés sont laissés
 sur disque. Les changements de `Rules` sont validés par la simulation au chargement, et les

@@ -59,6 +59,24 @@ fn mobility(sim: &mut SimHarness) -> MobilityState {
 }
 
 #[test]
+fn mechanics_schedule_has_no_redundant_set_membership() {
+    use bevy::ecs::schedule::{LogLevel, ScheduleBuildSettings};
+    use bevy::prelude::FixedUpdate;
+
+    let level = room(&["movement", "jump", "dash", "double_jump", "wall_jump"]);
+    let mut sim = SimHarness::new(&level).unwrap();
+    sim.spawn_player(PlayerId(0));
+    sim.app_mut().edit_schedule(FixedUpdate, |schedule| {
+        schedule.set_build_settings(ScheduleBuildSettings {
+            hierarchy_detection: LogLevel::Error,
+            ..Default::default()
+        });
+    });
+    // Build and run the real schedule with the startup warning promoted to an error.
+    sim.step(1, &input(0, 0));
+}
+
+#[test]
 fn dash_has_exact_duration_and_distance_without_gravity() {
     for gravity in [-1800.0, 1800.0] {
         let mut level = room(&["movement", "jump", "dash"]);
