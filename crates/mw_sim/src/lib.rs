@@ -21,6 +21,7 @@ pub mod mechanics;
 mod physics;
 mod player;
 mod rules;
+pub mod scripting;
 mod snapshot;
 
 pub use grid::{Aabb, CollisionGrid, SweepResult};
@@ -103,6 +104,8 @@ pub enum SimLoadError {
     InvalidLevel(Vec<ValidationError>),
     #[error("invalid level rules: {0:?}")]
     InvalidRules(Vec<RulesError>),
+    #[error("level scripts failed to load: {0:?}")]
+    Scripts(Vec<mw_script::ScriptError>),
 }
 
 /// The simulation: resources, ordered stages and the core systems.
@@ -135,6 +138,7 @@ impl Plugin for SimPlugin {
                 player::plugin,
                 mechanics::plugin,
                 combat::plugin,
+                scripting::plugin,
             ));
     }
 }

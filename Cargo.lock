@@ -4033,6 +4033,8 @@ dependencies = [
  "bevy",
  "mw_core",
  "mw_level",
+ "mw_script",
+ "rhai",
  "serde",
  "serde_json",
  "thiserror 2.0.21",

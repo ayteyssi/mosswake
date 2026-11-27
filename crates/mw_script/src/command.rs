@@ -18,6 +18,31 @@ pub enum ScriptCommand {
         key: String,
         value: serde_json::Value,
     },
+    /// `e.x = …`, `e.y = …`, `e.teleport(x, y)`: move a body (feet, tiles).
+    SetPosition { id: i64, x: f64, y: f64 },
+    /// `e.vx = …`, `e.vy = …`: set a body's velocity (tiles per second).
+    SetVelocity { id: i64, vx: f64, vy: f64 },
+    /// `e.damage(amount[, cause])`: queued damage (goes through `on_damage` and invincibility).
+    Damage { id: i64, amount: i64, cause: String },
+    /// `e.heal(amount)`: restore health, up to the maximum.
+    Heal { id: i64, amount: i64 },
+    /// `e.add_tag(t)` / `e.remove_tag(t)`.
+    SetTag { id: i64, tag: String, on: bool },
+    /// `e.set(key, value)`: a custom variable stored on the body.
+    SetVar {
+        id: i64,
+        key: String,
+        value: serde_json::Value,
+    },
+    /// `spawn_entity(kind, x, y[, props])`: create an entity (tiles).
+    Spawn {
+        kind: String,
+        x: f64,
+        y: f64,
+        props: serde_json::Value,
+    },
+    /// `e.despawn()`: remove a body.
+    Despawn { id: i64 },
 }
 
 /// Default display time of a HUD message, seconds.

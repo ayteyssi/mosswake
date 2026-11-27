@@ -360,12 +360,24 @@ fn apply_damage(world: &mut World, rules: &Rules, event: DamageEvent) -> bool {
         _ => 0.0,
     };
     let knockback = [x, -rules.gravity_dir() * rules.knockback_y];
-    let Some(mut health) = world.get_mut::<Health>(entity) else {
+    let Some(health) = world.get::<Health>(entity) else {
         return false;
     };
     if health.current == 0 || health.invincible_ticks > 0 {
         return false;
     }
+    // Level scripts may change or cancel a hit that would land (`on_damage`). Only where
+    // scripts run (server, solo); a 0 amount cancels it entirely (no stun, no knockback).
+    let event = DamageEvent {
+        amount: crate::scripting::filter_damage(world, &event),
+        ..event
+    };
+    if event.amount == 0 {
+        return false;
+    }
+    let Some(mut health) = world.get_mut::<Health>(entity) else {
+        return false; // a script despawned the target
+    };
     health.current = health.current.saturating_sub(event.amount);
     health.invincible_ticks = seconds_to_ticks(rules.damage_invincibility);
     health.stun_ticks = seconds_to_ticks(rules.hit_stun);

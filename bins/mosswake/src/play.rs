@@ -116,6 +116,9 @@ pub fn run(args: &[String]) -> Result<()> {
     load_level(app.world_mut(), &bundle.level)
         .map_err(|e| anyhow::anyhow!("{e}"))
         .with_context(|| format!("level `{}` is not playable", bundle.level.id))?;
+    mw_sim::scripting::load_scripts(app.world_mut(), &bundle)
+        .map_err(|errors| anyhow::anyhow!("{errors:#?}"))
+        .with_context(|| format!("scripts of level `{}` failed to load", bundle.level.id))?;
     spawn_player(app.world_mut(), LOCAL);
     app.run();
     Ok(())

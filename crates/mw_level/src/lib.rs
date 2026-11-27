@@ -29,4 +29,4 @@ pub const DEFAULT_TILE_SIZE: u32 = 32;
 pub const EMPTY_TILE: char = '.';
 
 /// Entity kinds a level may place. Extended as the simulation gains entities.
-pub const KNOWN_ENTITY_KINDS: &[&str] = &["slime_green", "slime_orange"];
+pub const KNOWN_ENTITY_KINDS: &[&str] = &["slime_green", "slime_orange", "trigger"];
