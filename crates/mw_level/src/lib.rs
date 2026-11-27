@@ -11,6 +11,7 @@ mod error;
 mod io;
 pub mod migrate;
 mod model;
+mod package;
 mod validate;
 
 pub use error::LevelError;

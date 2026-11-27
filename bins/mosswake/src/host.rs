@@ -8,11 +8,12 @@ use std::net::{Ipv4Addr, SocketAddr};
 
 use anyhow::{Context, Result};
 use mw_core::input::{PlayerId, PlayerInput};
-use mw_level::Level;
-use mw_net::{ClientState, NetClient, ServerMessage, ServerNetEvent};
+use mw_level::LevelBundle;
+use mw_net::{ClientState, LevelCache, NetClient, ServerMessage, ServerNetEvent};
 use mw_sim::Snapshot;
 
 use crate::input_sender::InputSender;
+use crate::level_sync::LevelSync;
 use crate::server::{decode_snapshot, ServerConfig, ServerSession, TICK};
 
 /// A hosted session: the server and the local player's client.
@@ -20,13 +21,15 @@ pub struct HostSession {
     server: ServerSession,
     client: NetClient,
     sender: InputSender,
+    /// The local client gets the level over loopback like any remote player (no cache).
+    level: LevelSync,
     latest: Option<Snapshot>,
 }
 
 impl HostSession {
     /// Starts the server on `config.bind` and connects the local player as `name`.
-    pub fn new(level: &Level, config: ServerConfig, name: &str) -> Result<Self> {
-        let server = ServerSession::new(level, config)?;
+    pub fn new(bundle: &LevelBundle, config: ServerConfig, name: &str) -> Result<Self> {
+        let server = ServerSession::new(bundle, config)?;
         let port = server.local_addr().port();
         let loopback = SocketAddr::from((Ipv4Addr::LOCALHOST, port));
         let client = NetClient::connect(loopback, name).context("local client cannot start")?;
@@ -34,6 +37,7 @@ impl HostSession {
             server,
             client,
             sender: InputSender::default(),
+            level: LevelSync::new(LevelCache::default()),
             latest: None,
         })
     }
@@ -46,7 +50,14 @@ impl HostSession {
             .update(TICK)
             .context("local client update failed")?;
         for message in self.client.receive() {
-            if let ServerMessage::Snapshot { data, .. } = message {
+            let outcome = self.level.handle(&message)?;
+            if outcome.loaded.is_some() {
+                self.latest = None; // snapshots of the previous level are meaningless now
+            }
+            for reply in &outcome.replies {
+                self.client.send(reply);
+            }
+            if let (ServerMessage::Snapshot { data, .. }, Some(_)) = (message, self.level.level()) {
                 let snapshot = decode_snapshot(&data)?;
                 if self.latest.as_ref().is_none_or(|s| snapshot.tick > s.tick) {
                     self.sender.on_snapshot(snapshot.tick);
@@ -68,6 +79,11 @@ impl HostSession {
 
     pub fn client_state(&self) -> &ClientState {
         self.client.state()
+    }
+
+    /// The level the local client has loaded (received from the server).
+    pub fn level(&self) -> Option<&LevelBundle> {
+        self.level.level()
     }
 
     /// Newest snapshot received by the local client (what it would draw).

@@ -15,6 +15,7 @@ pub mod discovery;
 pub mod handshake;
 pub mod protocol;
 mod server;
+pub mod transfer;
 
 pub use client::{ClientState, NetClient};
 pub use discovery::{Announcement, Announcer, Browser, DiscoveredGame};
@@ -23,6 +24,7 @@ pub use protocol::{
     Channel, ClientMessage, LeaveReason, PlayerInfo, ServerMessage, PROTOCOL_VERSION,
 };
 pub use server::{NetServer, NetServerConfig, ServerNetEvent};
+pub use transfer::{Assembler, LevelCache, LevelHash, LevelOffer, TransferError};
 
 /// Default game port (UDP).
 pub const DEFAULT_PORT: u16 = 47800;

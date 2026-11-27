@@ -14,3 +14,6 @@ mw_level.workspace = true
 mw_net.workspace = true
 mw_render.workspace = true
 mw_sim.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true

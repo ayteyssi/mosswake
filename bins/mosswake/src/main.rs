@@ -117,8 +117,9 @@ fn run_at_tick_rate(mut tick: impl FnMut() -> Result<()>) -> Result<()> {
 
 fn server(args: &[String]) -> Result<()> {
     let options = parse_options(args, "Mosswake server")?;
-    let level = load_level(&options.levels_dir, &options.level)?;
-    let mut session = ServerSession::new(&level, config(&options))?;
+    let bundle = load_level(&options.levels_dir, &options.level)?;
+    let level = &bundle.level;
+    let mut session = ServerSession::new(&bundle, config(&options))?;
     announce(&options, |name| session.announce_on_lan(name));
     println!(
         "mosswake server: level `{}` on {} (protocol v{}, up to {} players)",
@@ -135,8 +136,9 @@ fn server(args: &[String]) -> Result<()> {
 
 fn host(args: &[String]) -> Result<()> {
     let options = parse_options(args, "Host")?;
-    let level = load_level(&options.levels_dir, &options.level)?;
-    let mut session = HostSession::new(&level, config(&options), &options.name)?;
+    let bundle = load_level(&options.levels_dir, &options.level)?;
+    let level = &bundle.level;
+    let mut session = HostSession::new(&bundle, config(&options), &options.name)?;
     announce(&options, |name| session.server().announce_on_lan(name));
     println!(
         "mosswake host: level `{}` on {} — host mode is not rendered yet (#14; solo \

@@ -85,6 +85,7 @@ mod tests {
             ClientMessage::Inputs { first_tick, inputs } => {
                 (first_tick, inputs.iter().map(|i| i.axis_x).collect())
             }
+            other => panic!("the input sender only sends inputs, got {other:?}"),
         }
     }
 
