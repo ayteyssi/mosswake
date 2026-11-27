@@ -11,7 +11,9 @@
 mod command;
 mod error;
 mod host;
+mod world;
 
 pub use command::{dynamic_to_json, ScriptCommand, DEFAULT_HUD_SECONDS};
 pub use error::{ScriptError, ScriptErrorKind};
-pub use host::{HookOutcome, Limits, ScriptHost, STATE_VAR};
+pub use host::{HookOutcome, Limits, ScriptHost, RULES_VAR, STATE_VAR};
+pub use world::{json_to_dynamic, Entity, EntityData};
