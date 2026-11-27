@@ -12,7 +12,7 @@ use bevy::prelude::*;
 use mw_core::assets::{AnimationManifest, ManifestError};
 use mw_core::input::PlayerId;
 use mw_core::tileset::{AtlasError, TilesetAtlas};
-use mw_sim::LoadedLevel;
+use mw_sim::{LoadedLevel, Rules};
 
 mod actors;
 mod camera;
@@ -44,6 +44,12 @@ pub enum RenderSetupError {
     Atlas(#[from] AtlasError),
 }
 
+/// Run condition: a level is loaded and it changed (Bevy's `resource_changed` panics when
+/// the resource is missing, which is the case while `join` downloads the level).
+fn level_changed(level: Option<Res<LoadedLevel>>) -> bool {
+    level.is_some_and(|level| level.is_changed())
+}
+
 /// Draws the loaded level and its players, follows `follow` with the camera.
 pub struct ClientRenderPlugin {
     manifest: AnimationManifest,
@@ -69,17 +75,18 @@ impl Plugin for ClientRenderPlugin {
             .insert_resource(Tileset::new(self.atlas.clone(), TILESET_DIR))
             .insert_resource(CameraTarget(self.follow))
             .init_resource::<TextureScales>()
-            .add_systems(
-                Startup,
-                camera::spawn_camera.run_if(resource_exists::<LoadedLevel>),
-            )
             .add_systems(FixedPreUpdate, actors::remember_positions)
             .add_systems(
                 Update,
                 (
-                    level::rebuild_level_visuals.run_if(resource_changed::<LoadedLevel>),
+                    // On arrival of the first level: at startup in solo play, after the
+                    // download when joining a game.
+                    camera::spawn_camera.run_if(resource_added::<LoadedLevel>),
+                    // `resource_changed` panics on a missing resource: in `join` the
+                    // level only arrives after the download.
+                    level::rebuild_level_visuals.run_if(level_changed),
                     actors::attach_player_visuals.run_if(resource_exists::<LoadedLevel>),
-                    actors::animate_players,
+                    actors::animate_players.run_if(resource_exists::<Rules>),
                     sprites::animate,
                     actors::interpolate,
                     camera::follow.run_if(resource_exists::<LoadedLevel>),

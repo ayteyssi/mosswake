@@ -11,12 +11,14 @@
 use std::time::Duration;
 
 mod client;
+pub mod conditioner;
 pub mod handshake;
 pub mod protocol;
 mod server;
 pub mod transfer;
 
 pub use client::{ClientState, NetClient};
+pub use conditioner::{Conditions, LinkConditioner};
 pub use handshake::RejectReason;
 pub use protocol::{
     Channel, ClientMessage, LeaveReason, PlayerInfo, ServerMessage, PROTOCOL_VERSION,

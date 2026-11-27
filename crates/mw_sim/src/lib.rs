@@ -84,6 +84,11 @@ impl SimIds {
         self.next += 1;
         id
     }
+
+    /// Makes sure future ids come after `id` (after restoring a snapshot).
+    pub fn reserve_through(&mut self, id: SimId) {
+        self.next = self.next.max(id.0 + 1);
+    }
 }
 
 /// The level currently simulated.

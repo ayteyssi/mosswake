@@ -78,6 +78,11 @@ impl SimHarness {
         Snapshot::capture(self.app.world_mut())
     }
 
+    /// Replaces the simulation state with `snapshot` (see [`Snapshot::restore`]).
+    pub fn restore(&mut self, snapshot: &Snapshot) {
+        snapshot.restore(self.app.world_mut());
+    }
+
     /// Runs one tick per element of `script`, each with its inputs, and returns the body
     /// state of `id` after every tick (handy to assert on a whole trajectory).
     pub fn run_script(&mut self, id: SimId, script: &[TickInputs]) -> Vec<BodyState> {

@@ -5,12 +5,15 @@
 //! - [`input_buffer::InputBuffer`] / [`input_sender::InputSender`]: inputs on each side.
 //! - [`level_sync::LevelSync`]: client side of the level transfer (download, cache, load).
 //! - [`play`]: solo play with rendering (`mosswake play <level>`).
+//! - [`client::ClientSession`] / [`join`]: remote play with prediction (`mosswake join <addr>`).
 //!
 //! Gameplay stays in `mw_sim`; this crate only wires the simulation to the network.
 
+pub mod client;
 pub mod host;
 pub mod input_buffer;
 pub mod input_sender;
+pub mod join;
 pub mod level_sync;
 pub mod play;
 pub mod server;

@@ -81,6 +81,35 @@ Les scripts sont transmis avec le niveau mais **jamais exécutés côté client*
 le serveur). Le mode `host` passe par le même chemin : son client local télécharge le niveau en
 loopback comme un joueur distant.
 
+## Prédiction, réconciliation, interpolation (#14)
+`mosswake::client::ClientSession` (utilisée par `mosswake join`) :
+- **Prédiction** : le joueur local est simulé **tout de suite** par une copie locale de `mw_sim`
+  avec ses propres inputs. Aucune attente du serveur : le personnage répond au premier tick.
+- **Réconciliation** : chaque snapshot fait autorité. `Snapshot::restore` remet la sim locale dans
+  l'état du serveur **au bit près** (testé : restaurée puis nourrie des mêmes inputs, elle reste
+  identique au serveur). Les inputs non encore couverts par un snapshot sont ensuite **rejoués** par
+  dessus. Une erreur de prédiction est ainsi corrigée dès le snapshot suivant
+  (`last_correction` la mesure). Les autres joueurs sont prédits en répétant leur dernier input connu.
+- **Interpolation** : les autres joueurs sont **affichés** `INTERPOLATION_DELAY_TICKS` (6 ticks =
+  100 ms) dans le passé, entre les deux snapshots qui encadrent cet instant. C'est fluide, même
+  quand un snapshot est perdu, et jamais extrapolé.
+- Le rendu reste celui du solo : chaque tick, la vue de la session est recopiée dans des entités
+  (`Player`, `Position`, `PlayerState`, `Facing`, `MobilityState`) que `mw_render` dessine.
+
+### Simulation de latence et de pertes
+`mw_net::LinkConditioner` est un proxy UDP qui ajoute latence (par sens), gigue et pertes, avec une
+graine pour des résultats reproductibles. Chaque client a sa propre socket amont, donc le serveur voit
+des adresses distinctes. En temps logique pour les tests, en temps réel pour l'outil :
+```sh
+mosswake server --headless --level tutorial --port 47800
+mosswake proxy --to 127.0.0.1:47800 --port 47810 --latency 50 --jitter 5 --loss 2
+mosswake join 127.0.0.1:47810 --name Ayla
+```
+Test (`bins/mosswake/tests/prediction.rs`) avec **100 ms par sens**, 10 ms de gigue et 5 % de pertes :
+le joueur prédit bouge dès le 1er tick alors que le serveur n'a encore rien reçu ; au repos, la
+position prédite rejoint **exactement** celle du serveur (pas de divergence durable) ; un second
+client voit le premier, interpolé, à la position du serveur.
+
 ## Utilisation
 Boucle par frame, avec le temps écoulé passé explicitement (aucune lecture d'horloge interne,
 donc testable en accéléré) :
@@ -139,9 +168,11 @@ mosswake host --level <id> [--port 47800] [--name Host] [--max-players 4] [--lev
 - Le client vise `tick du dernier snapshot + INPUT_LEAD_TICKS` (3 ticks = 50 ms), puis +1 par
   tick. **Sans cette avance, la redondance ne sert à rien** : les copies arriveraient toujours après
   leur tick. Avec elle, jusqu'à 2 messages perdus d'affilée ne coûtent rien (testé avec 2 messages
-  sur 3 perdus). Prix : 50 ms de délai sur les réactions du joueur, que la prédiction client (#14)
-  masquera ; #14 remplacera aussi cette estimation par une vraie synchronisation qui tient compte
-  de la latence.
+  sur 3 perdus). Le délai que cela introduit est masqué par la prédiction client (voir plus bas).
+- **Latence** : un snapshot a déjà une demi-RTT de retard en arrivant, et l'input mettra une autre
+  demi-RTT à atteindre le serveur. Le client vise donc `dernier snapshot + RTT + INPUT_LEAD_TICKS`,
+  avec la RTT mesurée par le transport (`NetClient::rtt`, `InputSender::set_rtt_ticks`). Sinon, ses
+  inputs arriveraient périmés et le serveur répéterait l'input précédent à leur place.
 - Si le client se retrouve plus de `RESYNC_AHEAD_TICKS` (30) ticks en avance sur le dernier snapshot
   (serveur figé, horloges qui dérivent), il se recale : sinon il dériverait jusqu'à ce que le serveur
   ignore tous ses inputs comme trop en avance.

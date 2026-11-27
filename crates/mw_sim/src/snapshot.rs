@@ -5,6 +5,8 @@
 //! the network layer chooses the encoding. **Its encoded form is part of the network
 //! protocol**: changing these types bumps `mw_net::PROTOCOL_VERSION`.
 
+use std::collections::BTreeMap;
+
 use bevy::prelude::*;
 use mw_core::input::PlayerId;
 use serde::{Deserialize, Serialize};
@@ -12,7 +14,8 @@ use serde::{Deserialize, Serialize};
 use crate::mechanics::MobilityState;
 
 use crate::{
-    Contacts, Facing, Player, PlayerControl, PlayerState, Position, SimId, Tick, Velocity,
+    Body, Contacts, Facing, Player, PlayerControl, PlayerState, Position, Rules, SimId, SimIds,
+    Tick, Velocity,
 };
 
 /// The state of the simulation after [`Snapshot::tick`] ticks.
@@ -84,6 +87,70 @@ impl Snapshot {
             .collect();
         bodies.sort_by_key(|b| b.id);
         Self { tick, bodies }
+    }
+
+    /// Overwrites the simulation in `world` with this snapshot: bodies missing from it are
+    /// despawned, players missing from `world` are spawned, every recorded component is set,
+    /// and [`Tick`] becomes [`Snapshot::tick`]. Stepping the restored world with the same
+    /// inputs as the server then gives bit-identical states: the basis of client prediction
+    /// and reconciliation.
+    ///
+    /// Non-player bodies unknown to `world` are skipped (their shape is not in the snapshot);
+    /// none exist yet.
+    pub fn restore(&self, world: &mut World) {
+        // What the snapshot says each id is: a given player, or a non-player body.
+        let wanted: BTreeMap<SimId, Option<PlayerId>> = self
+            .bodies
+            .iter()
+            .map(|b| (b.id, b.player.map(|p| p.player)))
+            .collect();
+        let mut query = world.query::<(Entity, &SimId, Option<&Player>)>();
+        let mut existing = BTreeMap::new();
+        let mut stale = Vec::new();
+        for (entity, id, player) in query.iter(world) {
+            // Keep an entity only if the snapshot has the same kind of body under its id.
+            if wanted.get(id) == Some(&player.map(|p| p.0)) {
+                existing.insert(*id, entity);
+            } else {
+                stale.push(entity);
+            }
+        }
+        for entity in stale {
+            world.despawn(entity);
+        }
+        for body in &self.bodies {
+            let entity = match (existing.get(&body.id), body.player) {
+                (Some(entity), _) => *entity,
+                (None, Some(player)) => {
+                    let rules = world.resource::<Rules>();
+                    let size = Vec2::new(rules.player_width, rules.player_height);
+                    world
+                        .spawn((
+                            body.id,
+                            Player(player.player),
+                            Body {
+                                size,
+                                gravity_scale: 1.0,
+                            },
+                        ))
+                        .id()
+                }
+                (None, None) => continue,
+            };
+            let mut entity = world.entity_mut(entity);
+            entity.insert((
+                Position(Vec2::from_array(body.position)),
+                Velocity(Vec2::from_array(body.velocity)),
+                body.contacts,
+            ));
+            if let Some(p) = body.player {
+                entity.insert((p.state, p.facing, p.control, p.mobility));
+            }
+        }
+        if let Some(last) = self.bodies.iter().map(|b| b.id).max() {
+            world.resource_mut::<SimIds>().reserve_through(last);
+        }
+        world.insert_resource(Tick(self.tick));
     }
 
     /// The body of `player`, if it is in the snapshot.
