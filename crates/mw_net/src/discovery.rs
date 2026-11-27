@@ -44,6 +44,19 @@ pub struct Announcement {
     pub max_players: u8,
 }
 
+/// Makes `text` announceable: control characters removed, cut to [`MAX_TEXT`] bytes on a
+/// character boundary. Announcers must use it: browsers drop anything longer.
+pub fn announceable(text: &str) -> String {
+    let mut out = String::new();
+    for c in text.chars().filter(|c| !c.is_control()) {
+        if out.len() + c.len_utf8() > MAX_TEXT {
+            break;
+        }
+        out.push(c);
+    }
+    out
+}
+
 impl Announcement {
     pub fn encode(&self) -> Vec<u8> {
         let mut bytes = MAGIC.to_vec();
@@ -241,6 +254,24 @@ mod tests {
         let mut bytes = announcement().encode();
         bytes.extend([1, 2, 3]);
         assert_eq!(Announcement::decode(&bytes), Some(announcement()));
+    }
+
+    #[test]
+    fn announceable_text_always_decodes() {
+        let long = "La partie du samedi soir chez Mélusine et Ayla !";
+        assert!(long.len() > MAX_TEXT);
+        let name = announceable(long);
+        assert!(name.len() <= MAX_TEXT && long.starts_with(&name));
+        assert_eq!(announceable("a\tb\nc"), "abc");
+        // Multi-byte characters are never split.
+        let accents = announceable(&"é".repeat(40));
+        assert_eq!(accents, "é".repeat(MAX_TEXT / 2));
+        let a = Announcement {
+            name,
+            level: announceable(&"x".repeat(100)),
+            ..announcement()
+        };
+        assert_eq!(Announcement::decode(&a.encode()), Some(a));
     }
 
     #[test]

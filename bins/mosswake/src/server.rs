@@ -84,8 +84,9 @@ impl ServerSession {
         Announcement {
             protocol_version: mw_net::PROTOCOL_VERSION,
             game_port: self.local_addr().port(),
-            name: name.to_owned(),
-            level: self.level_id.clone(),
+            // Bounded like browsers expect, or the game would be silently invisible.
+            name: mw_net::discovery::announceable(name),
+            level: mw_net::discovery::announceable(&self.level_id),
             players: self.net.players().len() as u8,
             max_players: self.max_players,
         }

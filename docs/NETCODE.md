@@ -65,7 +65,9 @@ Rejoindre sans taper d'IP. `mw_net::discovery` :
   champ et des ajouts seulement en fin. Toute version liste toute partie et indique si elle est
   **incompatible**, au lieu de ne pas la voir. Les octets en trop (champs futurs) sont tolérés ;
   les datagrammes étrangers ou abusifs (> 512 octets, textes > 48 octets ou avec caractères de
-  contrôle) sont ignorés. Ce n'est pas un message de jeu : il ne fait pas varier `PROTOCOL_VERSION`.
+  contrôle) sont ignorés. Côté émetteur, nom et niveau passent par `discovery::announceable`
+  (troncature UTF-8 à 48 octets, contrôles retirés) : un nom long raccourcit l'annonce au lieu de
+  rendre la partie invisible. Ce n'est pas un message de jeu : il ne fait pas varier `PROTOCOL_VERSION`.
 - `Browser` écoute le port, garde une partie par adresse (IP de l'émetteur + port annoncé) et
   l'oublie après **3 s** de silence (temps passé explicitement à `update(dt)`).
 - `mosswake lan [--seconds 3]` affiche les parties entendues (adresse, nom, niveau, joueurs,
