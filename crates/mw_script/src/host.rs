@@ -260,7 +260,11 @@ impl ScriptHost {
 
     /// A snapshot of the persistent `state` object (for tests and the debug console).
     pub fn state(&self) -> Map {
-        self.state.clone().flatten().cast::<Map>()
+        self.state
+            .clone()
+            .flatten()
+            .try_cast::<Map>()
+            .unwrap_or_default()
     }
 
     /// Number of pending timers.
@@ -321,6 +325,7 @@ impl ScriptHost {
         before: usize,
         outcome: &mut HookOutcome,
     ) -> Option<Dynamic> {
+        let result = result.and_then(|value| self.check_globals().map(|()| value));
         match result {
             Ok(value) => {
                 self.commit_rules();
@@ -339,6 +344,21 @@ impl ScriptHost {
                 None
             }
         }
+    }
+
+    /// `state = 3` or `rules = 5` replace the shared object itself: that fails the call
+    /// (`rules` is then restored from its baseline, `state` restarts empty).
+    fn check_globals(&mut self) -> Result<(), Box<rhai::EvalAltResult>> {
+        if self.state.read_lock::<Map>().is_none() {
+            if let Some(mut inner) = self.state.write_lock::<Dynamic>() {
+                *inner = Dynamic::from_map(Map::new());
+            }
+            return Err(format!("`{STATE_VAR}` must stay an object: assign its fields").into());
+        }
+        if self.shared.rules.read_lock::<Map>().is_none() {
+            return Err(format!("`{RULES_VAR}` must stay an object: assign its fields").into());
+        }
+        Ok(())
     }
 
     /// Turns edits of `rules` since the baseline into `SetRule` commands.
@@ -376,8 +396,9 @@ impl ScriptHost {
             .iter()
             .map(|(k, v)| (k.as_str().into(), json_to_dynamic(v)))
             .collect();
-        if let Some(mut rules) = self.shared.rules.write_lock::<Map>() {
-            *rules = map;
+        // Replace the inner value whatever it became (a script may have assigned `rules`).
+        if let Some(mut rules) = self.shared.rules.write_lock::<Dynamic>() {
+            *rules = Dynamic::from_map(map);
         }
     }
 

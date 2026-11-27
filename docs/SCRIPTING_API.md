@@ -61,7 +61,9 @@ Tests : `on_player_spawn_runs_once_per_player`, `on_collision_fires_when_contact
 
 ## État persistant : `state`
 Objet (`#{}`) global, **conservé entre tous les appels** et partagé par tous les scripts du niveau,
-accessible aussi **à l'intérieur des fonctions**. Le nom `state` est réservé.
+accessible aussi **à l'intérieur des fonctions**. Le nom `state` est réservé. On modifie ses champs
+(`state.x = …`) ; le **remplacer** (`state = 3`) est une erreur d'exécution, et `state` repart alors
+vide. De même, `rules = …` est une erreur, et `rules` reprend ses valeurs.
 ```rhai
 state.lava_y = 0.0;              // premier niveau : initialisation au chargement
 
@@ -69,7 +71,8 @@ fn on_tick(dt) {
     state.lava_y += 20.0 * dt;   // persiste d'un tick à l'autre
 }
 ```
-Test : `hooks_are_called_and_state_persists`, `scripts_share_state_but_not_functions`.
+Tests : `hooks_are_called_and_state_persists`, `scripts_share_state_but_not_functions`,
+`replacing_state_or_rules_is_an_error_not_a_crash`.
 
 ## Fonctions
 ### `hud(text)` · `hud(text, seconds)`

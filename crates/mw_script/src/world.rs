@@ -434,19 +434,24 @@ pub(crate) fn register(engine: &mut Engine, shared: &Shared) {
     });
 
     // Mechanics: edit `rules.mechanics` (turned into a rule change after the hook).
-    let toggle = |rules: &Dynamic, id: &str, on: bool| {
+    let toggle = |rules: &Dynamic, id: &str, on: bool| -> Result<(), Box<EvalAltResult>> {
         // A clone of a shared value points to the same data: writing through it edits `rules`.
         let mut rules = rules.clone();
-        let mut map = rules.write_lock::<Map>().expect("rules is a shared map");
+        let mut map = rules
+            .write_lock::<Map>()
+            .ok_or("`rules` is no longer an object")?;
         let mut list: Array = map
             .get("mechanics")
             .and_then(|m| m.clone().try_cast::<Array>())
             .unwrap_or_default();
-        list.retain(|m| m.clone().into_string().ok().as_deref() != Some(id));
-        if on {
-            list.push(Dynamic::from(id.to_string()));
+        let is = |m: &Dynamic| m.clone().into_string().ok().as_deref() == Some(id);
+        match (on, list.iter().any(is)) {
+            (true, true) | (false, false) => return Ok(()), // already so: order kept, no change
+            (true, false) => list.push(Dynamic::from(id.to_string())),
+            (false, true) => list.retain(|m| !is(m)),
         }
         map.insert("mechanics".into(), Dynamic::from_array(list));
+        Ok(())
     };
     let s = shared.clone();
     engine.register_fn("enable_mechanic", move |id: ImmutableString| {
@@ -458,12 +463,13 @@ pub(crate) fn register(engine: &mut Engine, shared: &Shared) {
     });
     let s = shared.clone();
     engine.register_fn("mechanic_active", move |id: ImmutableString| -> bool {
-        let map = s.rules.read_lock::<Map>().expect("rules is a shared map");
-        map.get("mechanics")
-            .and_then(|m| m.clone().try_cast::<Array>())
-            .is_some_and(|list| {
-                list.iter()
-                    .any(|m| m.clone().into_string().ok().as_deref() == Some(id.as_str()))
-            })
+        s.rules.read_lock::<Map>().is_some_and(|map| {
+            map.get("mechanics")
+                .and_then(|m| m.clone().try_cast::<Array>())
+                .is_some_and(|list| {
+                    list.iter()
+                        .any(|m| m.clone().into_string().ok().as_deref() == Some(id.as_str()))
+                })
+        })
     });
 }

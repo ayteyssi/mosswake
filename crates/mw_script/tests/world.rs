@@ -239,3 +239,28 @@ fn a_repeating_timer_can_cancel_itself() {
     assert_eq!(h.state()["n"].as_int().unwrap(), 3);
     assert_eq!(h.timer_count(), 0);
 }
+
+#[test]
+fn replacing_state_or_rules_is_an_error_not_a_crash() {
+    let mut h = host(
+        r#"fn on_tick(dt) { if state.n == () { state.n = 1; rules = 5; } else { state = 3; } }
+        fn on_level_start() { state.active = mechanic_active("dash"); enable_mechanic("jump"); }"#,
+    );
+    h.set_rules(&json!({ "mechanics": ["dash", "jump"] }));
+    let first = h.on_tick(1.0 / 60.0);
+    assert_eq!(first.errors.len(), 1, "rules = 5");
+    assert!(
+        first.errors[0].message.contains("rules"),
+        "{:?}",
+        first.errors
+    );
+    // `rules` is back: mechanics still readable, and enabling an active one changes nothing
+    // (not even the order).
+    let start = h.on_level_start();
+    assert!(start.errors.is_empty(), "{:?}", start.errors);
+    assert!(start.commands.is_empty(), "{:?}", start.commands);
+    assert!(h.state()["active"].as_bool().unwrap());
+    let second = h.on_tick(1.0 / 60.0);
+    assert_eq!(second.errors.len(), 1, "state = 3");
+    assert!(h.state().is_empty(), "state restarts as an empty object");
+}
