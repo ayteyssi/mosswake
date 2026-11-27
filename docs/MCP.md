@@ -81,6 +81,11 @@ un répertoire temporaire par un seul renommage. Une mise à jour de plusieurs f
 une transaction globale en cas d'erreur disque pendant les renommages. Éviter plusieurs
 instances d'édition sur le même dossier : le verrou sérialise les appels d'une instance seulement.
 
+Sous Unix, remplacer un fichier conserve ses bits de permissions existants (par exemple
+0644, 0640 ou 0600), appliqués au temporaire avant d'y écrire. Les nouveaux fichiers suivent
+une création ordinaire : 0666 filtré par l'umask du processus. Les répertoires conservent leur
+comportement habituel (0777 filtré par l'umask). Le serveur ne modifie jamais l'umask.
+
 Le JSON sauvegardé est canonique (`mw_level`). Les anciens scripts non référencés sont laissés
 sur disque. Les changements de `Rules` sont validés par la simulation au chargement, et les
 sources Rhai par `mw_script`, pas par ce serveur d'édition structurelle.

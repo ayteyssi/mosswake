@@ -175,6 +175,23 @@ fn reject_symlinks(path: &Path) -> Result<()> {
 fn stage_file(path: &Path, bytes: &[u8]) -> Result<(tempfile::NamedTempFile, PathBuf)> {
     let parent = path.parent().context("file needs a parent directory")?;
     fs::create_dir_all(parent)?;
+    #[cfg(unix)]
+    let mut file = {
+        use std::os::unix::fs::PermissionsExt;
+
+        // New scripts behave like ordinary files: 0666 filtered by the caller's umask.
+        let file = tempfile::Builder::new()
+            .permissions(fs::Permissions::from_mode(0o666))
+            .tempfile_in(parent)?;
+        match fs::metadata(path) {
+            // Restore an existing mode before writing any bytes, including private modes.
+            Ok(metadata) => file.as_file().set_permissions(metadata.permissions())?,
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => {}
+            Err(error) => return Err(error.into()),
+        }
+        file
+    };
+    #[cfg(not(unix))]
     let mut file = tempfile::NamedTempFile::new_in(parent)?;
     file.write_all(bytes)?;
     file.as_file().sync_all()?;
