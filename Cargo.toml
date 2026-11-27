@@ -39,6 +39,7 @@ mw_core = { path = "crates/mw_core" }
 mw_level = { path = "crates/mw_level" }
 mw_net = { path = "crates/mw_net" }
 mw_sim = { path = "crates/mw_sim" }
+mw_script = { path = "crates/mw_script" }
 mw_render = { path = "crates/mw_render" }
 
 [profile.dev]

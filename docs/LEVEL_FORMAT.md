@@ -156,9 +156,22 @@ un calque `solid` conserve ses collisions pleines. Aucune commande de descente v
 ### Entités (`EntityDef`)
 | Champ | Description |
 |---|---|
-| `kind` | Type d'entité. Connus en v2 : `slime_green`, `slime_orange` (`mw_level::KNOWN_ENTITY_KINDS`). |
+| `kind` | Type d'entité. Connus en v2 : `slime_green`, `slime_orange`, `trigger` (`mw_level::KNOWN_ENTITY_KINDS`). |
 | `x`, `y` | Position (voir Coordonnées). |
 | `props` | Paramètres propres au type (objet libre, défaut `{}`). |
+
+#### `trigger` : zone de script (#19)
+Zone invisible et non solide. Quand un corps (joueur, ennemi, entité de script) y **entre**, les
+scripts reçoivent `on_trigger(name, entity)` (voir `docs/SCRIPTING_API.md`). Elle est ancrée comme
+les autres entités, par le milieu de son bord bas.
+| `props` | Défaut | Description |
+|---|---|---|
+| `name` | `""` | Nom passé à `on_trigger`, pour distinguer les zones. |
+| `w`, `h` | `1`, `1` | Taille en tiles. |
+```json
+{ "kind": "trigger", "x": 20.0, "y": 2.0, "props": { "name": "boss_door", "w": 2, "h": 3 } }
+```
+Ajout compatible : un niveau v2 existant reste valide, `schema_version` ne change donc pas.
 
 ## Coordonnées
 - Unité : la **tile** (nombres réels autorisés). Multiplier par `tile_size` pour obtenir les unités monde.

@@ -226,3 +226,16 @@ fn a_failing_call_rolls_back_its_rule_edits_and_timers() {
     probe.on_tick(1.0 / 60.0);
     assert_eq!(probe.state()["g"].as_float().unwrap(), -1800.0);
 }
+
+#[test]
+fn a_repeating_timer_can_cancel_itself() {
+    let mut h = host(
+        r#"state.n = 0;
+        state.id = every(1.0 / 60.0, || { state.n += 1; if state.n == 3 { cancel(state.id); } });"#,
+    );
+    for _ in 0..10 {
+        h.on_tick(1.0 / 60.0);
+    }
+    assert_eq!(h.state()["n"].as_int().unwrap(), 3);
+    assert_eq!(h.timer_count(), 0);
+}

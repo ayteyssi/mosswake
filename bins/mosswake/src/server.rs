@@ -236,6 +236,14 @@ impl ServerSession {
         &mut self.sim
     }
 
+    /// Script output, errors and refused commands since the last call.
+    pub fn take_script_log(&mut self) -> mw_sim::scripting::ScriptLog {
+        self.sim
+            .world_mut()
+            .resource_mut::<mw_sim::scripting::ScriptLog>()
+            .take()
+    }
+
     /// Connected players.
     pub fn players(&self) -> Vec<mw_net::PlayerInfo> {
         self.net.players()
@@ -250,8 +258,8 @@ impl ServerSession {
 /// A simulation of `bundle` and its package, refusing levels too large to send.
 fn prepare(bundle: &LevelBundle) -> Result<(SimHarness, Vec<u8>)> {
     let id = &bundle.level.id;
-    let sim =
-        SimHarness::new(&bundle.level).with_context(|| format!("cannot simulate level `{id}`"))?;
+    let sim = SimHarness::from_bundle(bundle, |_| {})
+        .with_context(|| format!("cannot simulate level `{id}`"))?;
     let package = bundle
         .to_package()
         .with_context(|| format!("cannot package level `{id}`"))?;

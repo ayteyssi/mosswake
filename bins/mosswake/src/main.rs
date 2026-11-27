@@ -101,6 +101,18 @@ fn log_events(events: &[ServerNetEvent]) {
     }
 }
 
+fn log_scripts(log: mw_sim::scripting::ScriptLog) {
+    for line in log.lines {
+        println!("[script] {line}");
+    }
+    for error in log.errors {
+        eprintln!("! script error: {error}");
+    }
+    for reason in log.rejected {
+        eprintln!("! script command refused: {reason}");
+    }
+}
+
 /// Calls `tick` at 60 Hz of wall-clock time, forever. Real time is only used here to pace
 /// the loop; the simulation itself advances by fixed ticks. After a long stall (debugger,
 /// suspended laptop) it resumes instead of running hundreds of ticks to catch up.
@@ -134,6 +146,7 @@ fn server(args: &[String]) -> Result<()> {
     );
     run_at_tick_rate(|| {
         log_events(&session.tick()?);
+        log_scripts(session.take_script_log());
         Ok(())
     })
 }
@@ -153,6 +166,7 @@ fn host(args: &[String]) -> Result<()> {
     let mut last_state = None;
     run_at_tick_rate(|| {
         log_events(&session.frame(PlayerInput::default())?);
+        log_scripts(session.server().take_script_log());
         let state = session.client_state().clone();
         if last_state.as_ref() != Some(&state) {
             println!("local client: {state:?}");

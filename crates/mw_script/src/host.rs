@@ -407,15 +407,16 @@ impl ScriptHost {
             self.book().script = timer.script;
             let ast = &self.scripts[timer.script].ast;
             let result = timer.callback.call::<Dynamic>(&self.engine, ast, ());
+            // Read before `after_call`, which consumes pending cancellations: the timer is
+            // out of `self.timers` while it runs, so `cancel(own id)` must be seen here.
+            let cancelled = self.book().cancelled.remove(&timer.id);
             if self
                 .after_call(timer.script, "timer", result, before, outcome)
                 .is_some()
             {
-                if let Some(period) = timer.period {
-                    if !self.book().cancelled.remove(&timer.id) {
-                        timer.due += period;
-                        self.timers.push(timer);
-                    }
+                if let Some(period) = timer.period.filter(|_| !cancelled) {
+                    timer.due += period;
+                    self.timers.push(timer);
                 }
             }
         }

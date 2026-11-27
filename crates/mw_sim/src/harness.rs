@@ -4,7 +4,7 @@
 
 use bevy::prelude::*;
 use mw_core::input::PlayerId;
-use mw_level::Level;
+use mw_level::{Level, LevelBundle};
 
 use crate::{
     load_level, Body, Contacts, Facing, PlayerState, Position, SimId, SimIds, SimLoadError,
@@ -41,6 +41,18 @@ impl SimHarness {
         app.cleanup();
         load_level(app.world_mut(), level)?;
         Ok(Self { app })
+    }
+
+    /// A simulation of `bundle` running its scripts (server side), with `setup` as in
+    /// [`SimHarness::with_setup`].
+    pub fn from_bundle(
+        bundle: &LevelBundle,
+        setup: impl FnOnce(&mut App),
+    ) -> Result<Self, SimLoadError> {
+        let mut harness = Self::with_setup(&bundle.level, setup)?;
+        crate::scripting::load_scripts(harness.world_mut(), bundle)
+            .map_err(SimLoadError::Scripts)?;
+        Ok(harness)
     }
 
     pub fn app_mut(&mut self) -> &mut App {
