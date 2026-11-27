@@ -154,13 +154,87 @@ Les pivots et hitboxes ont été mesurés sur l'enveloppe opaque des frames, pui
 dessinant par-dessus les images.
 
 ## Mémoire et rognage
-Les frames ne sont **pas rognées** : les PNG sont conservés tels quels. Mesure faite pendant #1 :
-toutes les frames décodées en RGBA pleine résolution occupent **~1011 Mio**. Rognées à l'union
-opaque de chaque animation, elles occupent ~471 Mio. Comme les sprites s'affichent bien plus petits
-que leur résolution source, une réduction (×4) est le vrai levier. Voir l'issue #30 (outil `xtask`
-qui génère des frames rognées et réduites avec un manifest cohérent).
+Les PNG et le manifest de `assets/` sont les **sources intactes**. La préparation des dérivés
+est explicite ; elle ne se lance pas pendant `cargo build` et ne remplace pas les sources :
 
-Depuis #10, le rendu **réduit chaque texture au chargement** à ~64 px par tile (`mw_render::textures`)
-avant l'envoi au GPU, et ne charge que les sprites présents dans le niveau : la VRAM est maîtrisée.
-Restent le temps de décodage des PNG pleine taille et la RAM de pointe au démarrage, que #30
-réglera en pré-calculant les frames.
+```sh
+cargo xtask build-assets
+cargo xtask build-assets --scale 2
+cargo xtask build-assets --scale 4 --source assets --output target/generated-assets
+```
+
+Le facteur est un entier de 1 à 64 (défaut 4 ; 1 = rognage seul). Les chemins par défaut
+sont relatifs à la racine du workspace ; les chemins explicitement fournis sont relatifs au
+dossier courant. `cargo xtask --help` affiche l'aide. Seule la dépendance `image` avec son
+codec PNG est utilisée, sans fenêtre ni GPU.
+
+### Sorties et versionnement
+`target/generated-assets/` est ignoré par Git via `/target` : on versionne l'outil, son lockfile
+et les sources, et on régénère les sorties avant de les distribuer. Il contient :
+
+- `manifest.json`, au format v1, chargé avec `AnimationManifest::load(output)` et validé contre
+  toutes les frames générées ;
+- `frames/<index-sprite>/<index-animation>/NNNN.png` : indices stables selon l'ordre des ids
+  et noms dans le manifest ; les noms de sprite restent les mêmes dans le manifest ;
+- `build-report.json` : facteur, nombre de frames, rectangles de rognage en coordonnées source
+  et octets RGBA8 avant/après (aucun chemin absolu ni horodatage).
+
+Ce dossier est une racine **d'animations**, pas un remplacement complet de `assets/` : les
+tilesets et leur atlas restent dans les sources. Un consommateur des dérivés doit charger
+ce manifest et résoudre ses chemins de frames contre le même dossier généré ; changer
+seulement le manifest en conservant l'ancienne racine de frames ne fonctionne pas.
+
+On peut relancer la commande dans le même dossier : la génération et la validation se font
+dans un répertoire temporaire voisin, puis le répertoire précédent est remplacé, sans frames
+périmées. Une erreur de lecture/validation laisse les anciennes sorties utilisables. L'outil
+refuse de remplacer un dossier qui ne porte pas son rapport de génération, ainsi que toute
+sortie recouvrant les sources (parents, enfants ou liens symboliques).
+
+### Géométrie et reproductibilité
+L'enveloppe inclut chaque pixel de chaque frame dont l'alpha est non nul. Le manifest v1
+partage `frame_size` et `pivot` entre toutes les animations d'un sprite : leurs unions opaques
+sont donc réunies dans **un cadre commun par sprite**, plutôt que de créer un format incompatible
+avec des repères par animation. Cela conserve les changements d'animation sans décalage.
+Le pivot et la hitbox sont inclus même s'ils dépassent les pixels peints.
+
+Le cadre est aligné sur un multiple du facteur **relativement au pivot**. Un petit ajout de
+transparence est possible au bord du fichier : aucune taille n'est étirée pour faire rentrer
+un rectangle indivisible. Pour un facteur `s` et une origine de cadre `(cx, cy)` :
+
+- `frame_size = (largeur_cadre / s, hauteur_cadre / s)` ;
+- `pivot = ((pivot_source.x - cx) / s, (pivot_source.y - cy) / s)`, exact en pixels entiers ;
+- `pixels_per_tile = pixels_per_tile_source / s` : le pivot reste exactement à sa position monde ;
+- les bords de hitbox sont arrondis vers l'extérieur, avec une extension inférieure à un pixel
+  généré par côté. La hitbox suggérée ne rétrécit jamais ; les `Rules` de simulation restent inchangées.
+
+Les images sont réduites par Lanczos3 sur couleurs prémultipliées par l'alpha, puis reconverties
+en RGBA8, pour éviter les contours assombris. Le manifest conserve fps, bouclage et nombre de
+frames. Une animation entièrement transparente garde un cadre valide incluant son pivot.
+L'ordre des opérations, le JSON et l'encodage PNG sont déterministes avec le `Cargo.lock`
+versionné ; les tests comparent les octets de deux générations et d'une régénération.
+
+### Mesure
+Le rapport additionne `largeur × hauteur × 4` pour toutes les frames : taille des pixels RGBA8
+décodés, hors mipmaps, alignement GPU et compression PNG. Le rendu doit encore ne charger que
+les animations des sprites présents dans le niveau.
+
+Mesure sur le manifest versionné (886 frames d'animation ; les 6 autres PNG sont les planches
+du tileset, non transformées), avec `cargo xtask build-assets --scale 4` :
+
+| Données | Octets RGBA8 | Mio |
+|---|---:|---:|
+| Frames source | 1 060 052 896 | 1 010,95 |
+| Frames générées | 32 048 976 | 30,56 |
+
+Réduction de **96,98 %**, environ **33 fois moins** de pixels à charger. L'estimation initiale
+de ~471 Mio après simple rognage utilisait des enveloppes indépendantes par animation ; le cadre
+commun par sprite et la conservation des repères expliquent un peu de transparence supplémentaire.
+La génération réelle vérifie le manifest de sortie ; une comparaison SHA-256 des PNG sources et
+du manifest avant/après a confirmé qu'ils restent identiques.
+
+### Réduction au chargement
+Depuis #10, le rendu réduit aussi chaque texture au chargement à environ 64 px par tile
+(`mw_render::textures`) avant l'envoi au GPU, et ne charge que les sprites présents dans le
+niveau. La VRAM est donc déjà maîtrisée avec les sources. Les dérivés préparés par xtask
+permettent surtout d'éviter le décodage des PNG pleine taille et de réduire la RAM de pointe
+au démarrage, quand le consommateur utilise leur manifest et leur racine de frames.
