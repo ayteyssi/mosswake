@@ -14,6 +14,7 @@ use mw_core::input::{PlayerId, PlayerInput};
 use mw_level::{Level, ValidationError};
 use serde::{Deserialize, Serialize};
 
+pub mod combat;
 mod grid;
 mod harness;
 pub mod mechanics;
@@ -129,7 +130,12 @@ impl Plugin for SimPlugin {
                     .chain(),
             )
             .add_systems(FixedUpdate, advance_tick.in_set(SimSet::Cleanup))
-            .add_plugins((physics::plugin, player::plugin, mechanics::plugin));
+            .add_plugins((
+                physics::plugin,
+                player::plugin,
+                mechanics::plugin,
+                combat::plugin,
+            ));
     }
 }
 

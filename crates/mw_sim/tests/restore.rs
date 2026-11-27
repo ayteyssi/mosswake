@@ -13,7 +13,7 @@ fn level() -> mw_level::Level {
     let mut level = LevelBundle::load(dir).unwrap().level;
     level.rules.insert(
         "mechanics".into(),
-        serde_json::json!(["movement", "jump", "dash"]),
+        serde_json::json!(["movement", "jump", "dash", "melee"]),
     );
     level
 }
@@ -30,7 +30,15 @@ fn inputs(tick: u64) -> TickInputs {
         if phase % 97 == 50 {
             pressed |= buttons::DASH;
         }
-        let axis_x = if (phase / 60).is_multiple_of(2) { 127 } else { -90 };
+        // Attacks too, so combat state (health, hitboxes, stun) is part of the replay.
+        if phase % 23 == 5 {
+            pressed |= buttons::ATTACK;
+        }
+        let axis_x = if (phase / 60).is_multiple_of(2) {
+            127
+        } else {
+            -90
+        };
         inputs.0.insert(
             PlayerId(p),
             PlayerInput {

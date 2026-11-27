@@ -342,6 +342,7 @@ mod tests {
                 velocity: [0.0, 0.0],
                 contacts: Contacts::default(),
                 player: None,
+                combat: None,
             }],
         }
     }

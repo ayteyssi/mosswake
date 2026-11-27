@@ -9,7 +9,8 @@ use mw_core::input::PlayerId;
 use mw_level::LevelBundle;
 use mw_net::transfer::chunks;
 use mw_net::{
-    protocol, ClientMessage, LevelOffer, NetServer, NetServerConfig, ServerMessage, ServerNetEvent,
+    protocol, Announcement, Announcer, ClientMessage, LevelOffer, NetServer, NetServerConfig,
+    ServerMessage, ServerNetEvent,
 };
 use mw_sim::{SimHarness, Snapshot, TickInputs, TICK_HZ};
 
@@ -46,6 +47,10 @@ pub struct ServerSession {
     loading: BTreeSet<PlayerId>,
     /// Level packages sent (requests served), for tests and logs.
     uploads: u32,
+    level_id: String,
+    max_players: u8,
+    /// LAN announcements, when enabled, and the announced game name.
+    announcer: Option<(Announcer, String)>,
 }
 
 impl ServerSession {
@@ -66,6 +71,9 @@ impl ServerSession {
             offer,
             loading: BTreeSet::new(),
             uploads: 0,
+            level_id: bundle.level.id.clone(),
+            max_players: config.max_players,
+            announcer: None,
         })
     }
 
@@ -74,6 +82,7 @@ impl ServerSession {
     pub fn change_level(&mut self, bundle: &LevelBundle) -> Result<()> {
         let (sim, package) = prepare(bundle)?;
         self.sim = sim;
+        self.level_id = bundle.level.id.clone();
         self.offer = LevelOffer::new(self.offer.transfer + 1, &package);
         self.package = package;
         self.inputs.clear();
@@ -116,6 +125,34 @@ impl ServerSession {
             }
             // Stale transfer numbers (an older level) and duplicates are ignored.
             _ => {}
+        }
+    }
+
+    /// Announces this game as `name` on the LAN (broadcast on the discovery port).
+    pub fn announce_on_lan(&mut self, name: impl Into<String>) -> Result<()> {
+        let announcer = Announcer::lan().context("cannot open the LAN discovery socket")?;
+        self.announcer = Some((announcer, name.into()));
+        Ok(())
+    }
+
+    /// Announces this game to explicit addresses (tests, or LANs filtering broadcast).
+    pub fn announce_to(&mut self, targets: Vec<SocketAddr>, name: impl Into<String>) -> Result<()> {
+        let announcer =
+            Announcer::to_targets(targets).context("cannot open the discovery socket")?;
+        self.announcer = Some((announcer, name.into()));
+        Ok(())
+    }
+
+    /// What the server would announce now.
+    pub fn announcement(&self, name: &str) -> Announcement {
+        Announcement {
+            protocol_version: mw_net::PROTOCOL_VERSION,
+            game_port: self.local_addr().port(),
+            // Bounded like browsers expect, or the game would be silently invisible.
+            name: mw_net::discovery::announceable(name),
+            level: mw_net::discovery::announceable(&self.level_id),
+            players: self.net.players().len() as u8,
+            max_players: self.max_players,
         }
     }
 
@@ -164,6 +201,11 @@ impl ServerSession {
             });
         }
         self.net.flush();
+        if let Some((mut announcer, name)) = self.announcer.take() {
+            // Best effort: a LAN without broadcast must not stop the game.
+            let _ = announcer.update(TICK, &self.announcement(&name));
+            self.announcer = Some((announcer, name));
+        }
         Ok(events)
     }
 
