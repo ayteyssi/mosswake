@@ -1,4 +1,4 @@
-//! Serde types of the level format (schema v1). See `docs/LEVEL_FORMAT.md`.
+//! Serde types of the level format (schema v2). See `docs/LEVEL_FORMAT.md`.
 
 use std::collections::BTreeMap;
 
@@ -70,6 +70,8 @@ pub enum LayerKind {
     Decor,
     /// Hurts on contact.
     Hazard,
+    /// Blocks only the supporting face in the gravity direction.
+    Platform,
 }
 
 /// A grid of tiles.
@@ -134,6 +136,14 @@ impl Level {
         }
     }
 
+    /// Whether grid cell `(x, y)` holds a one-way platform, independently of solid tiles.
+    pub fn is_platform(&self, x: u32, y: u32) -> bool {
+        self.layers
+            .iter()
+            .filter(|l| l.kind == LayerKind::Platform)
+            .any(|l| l.tile_at(x, y).is_some())
+    }
+
     /// Whether grid cell `(x, y)` (y up) holds a tile in any [`LayerKind::Solid`] layer.
     pub fn is_solid(&self, x: u32, y: u32) -> bool {
         self.layers
@@ -171,6 +181,28 @@ mod tests {
         assert_eq!(l.tile_at(2, 0), None);
         assert_eq!(l.tile_at(0, 2), None);
         assert_eq!(layer(&[]).tile_at(0, 0), None);
+    }
+
+    #[test]
+    fn platform_roundtrip_is_distinct_from_solid() {
+        let mut level = Level::new("platform", "Platform", Size { w: 2, h: 1 });
+        level.spawns.push(Spawn { x: 0.5, y: 0.0 });
+        level.legend.insert('#', "mossy_ground".into());
+        level.layers.push(Layer {
+            name: "one_way".into(),
+            kind: LayerKind::Platform,
+            tiles: vec!["#.".into()],
+        });
+        assert!(level.is_platform(0, 0));
+        assert!(!level.is_solid(0, 0));
+        assert!(!level.is_platform(1, 0));
+        assert!(
+            level.validate().is_empty(),
+            "a spawn can pass through a platform cell"
+        );
+        let json = level.to_json().unwrap();
+        assert!(json.contains("\"kind\": \"platform\""));
+        assert_eq!(Level::from_json(&json).unwrap(), level);
     }
 
     #[test]
