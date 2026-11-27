@@ -166,14 +166,15 @@ fn autoplay(
     );
 }
 
+/// `--screenshot` support shared by `play` and `join`: capture at `at`, then quit.
 #[derive(Resource)]
-struct ScreenshotPlan {
-    path: PathBuf,
-    at: Duration,
-    taken: Option<Duration>,
+pub(crate) struct ScreenshotPlan {
+    pub(crate) path: PathBuf,
+    pub(crate) at: Duration,
+    pub(crate) taken: Option<Duration>,
 }
 
-fn take_screenshot_then_exit(
+pub(crate) fn take_screenshot_then_exit(
     mut commands: Commands,
     time: Res<Time>,
     mut plan: ResMut<ScreenshotPlan>,

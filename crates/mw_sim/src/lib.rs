@@ -14,6 +14,7 @@ use mw_core::input::{PlayerId, PlayerInput};
 use mw_level::{Level, ValidationError};
 use serde::{Deserialize, Serialize};
 
+pub mod combat;
 mod grid;
 mod harness;
 pub mod mechanics;
@@ -84,6 +85,11 @@ impl SimIds {
         self.next += 1;
         id
     }
+
+    /// Makes sure future ids come after `id` (after restoring a snapshot).
+    pub fn reserve_through(&mut self, id: SimId) {
+        self.next = self.next.max(id.0 + 1);
+    }
 }
 
 /// The level currently simulated.
@@ -124,7 +130,12 @@ impl Plugin for SimPlugin {
                     .chain(),
             )
             .add_systems(FixedUpdate, advance_tick.in_set(SimSet::Cleanup))
-            .add_plugins((physics::plugin, player::plugin, mechanics::plugin));
+            .add_plugins((
+                physics::plugin,
+                player::plugin,
+                mechanics::plugin,
+                combat::plugin,
+            ));
     }
 }
 

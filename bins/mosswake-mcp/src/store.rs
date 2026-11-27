@@ -1,5 +1,5 @@
 use std::{
-    collections::BTreeMap,
+    collections::{BTreeMap, BTreeSet},
     fs,
     io::Write,
     path::{Path, PathBuf},
@@ -7,33 +7,56 @@ use std::{
 
 use anyhow::{bail, Context, Result};
 use mw_core::tileset::TilesetAtlas;
-use mw_level::{LevelBundle, LEVEL_FILE};
+use mw_level::{LevelBundle, ValidationError, LEVEL_FILE};
 use serde_json::{json, Value};
 
 /// Filesystem operations, independent of MCP. One server serializes access to this store.
 pub struct LevelStore {
     root: PathBuf,
     atlas: TilesetAtlas,
+    /// Auto-tiled terrain families of the atlas.
+    terrains: BTreeSet<String>,
+    /// Every id a legend may use: terrain families and named pieces. Built once from the
+    /// atlas; `palette()` and every validation read it, so they cannot disagree.
+    tile_ids: BTreeSet<String>,
 }
 
 impl LevelStore {
     pub fn new(levels: impl AsRef<Path>, tileset: impl AsRef<Path>) -> Result<Self> {
         fs::create_dir_all(&levels).context("creating levels directory")?;
+        let atlas = TilesetAtlas::load(tileset).context("loading tileset atlas")?;
+        let terrains: BTreeSet<String> = atlas
+            .pieces
+            .values()
+            .filter_map(|p| p.autotile.as_ref().map(|a| a.terrain.clone()))
+            .collect();
+        let tile_ids = terrains
+            .iter()
+            .cloned()
+            .chain(atlas.pieces.keys().cloned())
+            .collect();
         Ok(Self {
             root: levels.as_ref().canonicalize()?,
-            atlas: TilesetAtlas::load(tileset).context("loading tileset atlas")?,
+            atlas,
+            terrains,
+            tile_ids,
         })
     }
 
     pub fn palette(&self) -> Value {
-        let terrains: std::collections::BTreeSet<_> = self
-            .atlas
-            .pieces
-            .values()
-            .filter_map(|p| p.autotile.as_ref().map(|a| &a.terrain))
-            .collect();
         json!({"entity_kinds": mw_level::KNOWN_ENTITY_KINDS,
-            "terrains": terrains, "pieces": self.atlas.pieces})
+            "terrains": self.terrains, "pieces": self.atlas.pieces})
+    }
+
+    /// Ids accepted in a legend (terrain families and atlas pieces).
+    pub fn tile_ids(&self) -> &BTreeSet<String> {
+        &self.tile_ids
+    }
+
+    /// Every validation error of `bundle`, legend ids checked against the atlas
+    /// (`unknown_tile_id`). The single validation used by reads, writes and `validate_level`.
+    pub fn validate(&self, bundle: &LevelBundle) -> Vec<ValidationError> {
+        bundle.validate_with_tile_ids(&self.tile_ids)
     }
 
     pub fn list(&self) -> Result<Value> {
@@ -49,7 +72,7 @@ impl LevelStore {
                 // A malformed level must not hide the other levels from an editor.
                 match self.load(&id) {
                     Ok(bundle) => levels.push(json!({"id": id, "name": bundle.level.name,
-                        "size": bundle.level.size, "errors": bundle.validate()})),
+                        "size": bundle.level.size, "errors": self.validate(&bundle)})),
                     Err(error) => levels.push(json!({"id": id, "error": format!("{error:#}")})),
                 }
             }
@@ -86,7 +109,7 @@ impl LevelStore {
             .map(|(index, entity)| json!({"index": index, "entity": entity}))
             .collect();
         Ok(json!({"level": bundle.level, "grids_top_to_bottom": grids,
-            "indexed_entities": entities, "errors": bundle.validate()}))
+            "indexed_entities": entities, "errors": self.validate(&bundle)}))
     }
 
     /// Validate first, then publish a newly created directory with one rename.
@@ -127,7 +150,7 @@ impl LevelStore {
     }
 
     fn check(&self, bundle: &LevelBundle) -> Result<()> {
-        let errors = bundle.validate();
+        let errors = self.validate(bundle);
         if !errors.is_empty() {
             bail!("validation failed: {}", serde_json::to_string(&errors)?);
         }

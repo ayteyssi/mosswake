@@ -27,11 +27,12 @@ pub const RESYNC_AHEAD_TICKS: u64 = 30;
 ///
 /// Tick estimate: the next input is for the tick of the newest snapshot plus
 /// [`INPUT_LEAD_TICKS`], then one more per call. On loopback (host mode) that is exactly the
-/// lead; a remote client additionally loses half a round trip. Tick synchronization that
-/// measures it belongs to client prediction (#14).
+/// lead; a remote client adds the measured round trip ([`InputSender::set_rtt_ticks`]).
 #[derive(Debug, Clone, Default)]
 pub struct InputSender {
     next_tick: Option<u64>,
+    /// Extra lead covering the network round trip, in ticks (see [`InputSender::set_rtt_ticks`]).
+    rtt_ticks: u64,
     /// `(tick, input)`, contiguous ticks, oldest first.
     history: VecDeque<(u64, PlayerInput)>,
 }
@@ -42,7 +43,9 @@ impl InputSender {
     /// Behind the target: jump ahead. Ahead by up to [`RESYNC_AHEAD_TICKS`]: keep counting
     /// (snapshots are older than the server's current tick). Further ahead: come back.
     pub fn on_snapshot(&mut self, tick: u64) {
-        let target = tick.saturating_add(INPUT_LEAD_TICKS);
+        let target = tick
+            .saturating_add(INPUT_LEAD_TICKS)
+            .saturating_add(self.rtt_ticks);
         let in_range =
             |next: u64| (target..=target.saturating_add(RESYNC_AHEAD_TICKS)).contains(&next);
         if !self.next_tick.is_some_and(in_range) {
@@ -50,6 +53,16 @@ impl InputSender {
             self.next_tick = Some(target);
             self.history.clear();
         }
+    }
+
+    /// Sets the measured round trip, in ticks. A snapshot is half a round trip old when it
+    /// arrives and an input takes another half to reach the server: inputs must be tagged
+    /// a full round trip (plus [`INPUT_LEAD_TICKS`]) after the newest snapshot, or they
+    /// arrive too late and the server replaces them with the previous input. Takes effect at
+    /// the next snapshot (a longer trip jumps ahead; a shorter one is absorbed by the
+    /// [`RESYNC_AHEAD_TICKS`] tolerance).
+    pub fn set_rtt_ticks(&mut self, ticks: u64) {
+        self.rtt_ticks = ticks;
     }
 
     /// Records `input` for the next tick and returns the message to send, or `None` before
@@ -85,6 +98,7 @@ mod tests {
             ClientMessage::Inputs { first_tick, inputs } => {
                 (first_tick, inputs.iter().map(|i| i.axis_x).collect())
             }
+            other => panic!("the input sender only sends inputs, got {other:?}"),
         }
     }
 

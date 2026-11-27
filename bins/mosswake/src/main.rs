@@ -2,10 +2,15 @@
 //!
 //! ```text
 //! mosswake play <level> [--autoplay] [--screenshot <file.png> [--at <seconds>]]
-//! mosswake server --headless --level <id> [--port <port>] [--max-players <n>] [--levels-dir <dir>]
-//! mosswake host --level <id> [--port <port>] [--name <name>] [--max-players <n>] [--levels-dir <dir>]
+//! mosswake join <addr[:port]> [--name <name>] [--demo] [--screenshot <file.png> [--at <s>]]
+//! mosswake proxy --to <addr[:port]> [--port <p>] [--latency <ms>] [--jitter <ms>] [--loss <%>]
+//! mosswake server --headless --level <id> [--port <port>] [--name <name>] [--max-players <n>] [--levels-dir <dir>] [--no-announce]
+//! mosswake host --level <id> [--port <port>] [--name <name>] [--max-players <n>] [--levels-dir <dir>] [--no-announce]
+//! mosswake lan [--seconds <s>] [--port <port>]
 //! ```
-//! Still to come: `mosswake join <addr>` (#14, #15) and `mosswake edit <level>` (#23).
+//! `server` and `host` announce themselves on the LAN unless `--no-announce`; `lan` lists
+//! the games it hears.
+//! Still to come: the main menu (#49) and `mosswake edit` (#23).
 
 use std::net::{Ipv4Addr, SocketAddr};
 use std::path::PathBuf;
@@ -21,8 +26,11 @@ use mw_net::{ServerNetEvent, DEFAULT_PORT};
 
 const USAGE: &str = "usage:
   mosswake play <level> [--autoplay] [--screenshot <file.png> [--at <seconds>]]
-  mosswake server --headless --level <id> [--port <port>] [--max-players <n>] [--levels-dir <dir>]
-  mosswake host --level <id> [--port <port>] [--name <name>] [--max-players <n>] [--levels-dir <dir>]";
+  mosswake join <addr[:port]> [--name <name>] [--demo] [--screenshot <file.png> [--at <s>]]
+  mosswake proxy --to <addr[:port]> [--port <p>] [--latency <ms>] [--jitter <ms>] [--loss <%>]
+  mosswake server --headless --level <id> [--port <port>] [--name <name>] [--max-players <n>] [--levels-dir <dir>] [--no-announce]
+  mosswake host --level <id> [--port <port>] [--name <name>] [--max-players <n>] [--levels-dir <dir>] [--no-announce]
+  mosswake lan [--seconds <s>] [--port <port>]";
 
 /// Options shared by `server` and `host`.
 struct Options {
@@ -30,16 +38,19 @@ struct Options {
     port: u16,
     max_players: u8,
     levels_dir: PathBuf,
+    /// Game name on the LAN (and the host's player name).
     name: String,
+    announce: bool,
 }
 
-fn parse_options(args: &[String], allow_name: bool) -> Result<Options> {
+fn parse_options(args: &[String], default_name: &str) -> Result<Options> {
     let mut options = Options {
         level: String::new(),
         port: DEFAULT_PORT,
         max_players: 4,
         levels_dir: mosswake::default_levels_dir(),
-        name: "Host".into(),
+        name: default_name.into(),
+        announce: true,
     };
     let mut args = args.iter();
     while let Some(arg) = args.next() {
@@ -56,7 +67,8 @@ fn parse_options(args: &[String], allow_name: bool) -> Result<Options> {
                 options.max_players = value()?.parse().context("invalid --max-players")?
             }
             "--levels-dir" => options.levels_dir = PathBuf::from(value()?),
-            "--name" if allow_name => options.name = value()?.clone(),
+            "--name" => options.name = value()?.clone(),
+            "--no-announce" => options.announce = false,
             other => bail!("unknown option `{other}`\n{USAGE}"),
         }
     }
@@ -108,9 +120,11 @@ fn run_at_tick_rate(mut tick: impl FnMut() -> Result<()>) -> Result<()> {
 }
 
 fn server(args: &[String]) -> Result<()> {
-    let options = parse_options(args, false)?;
-    let level = load_level(&options.levels_dir, &options.level)?;
-    let mut session = ServerSession::new(&level, config(&options))?;
+    let options = parse_options(args, "Mosswake server")?;
+    let bundle = load_level(&options.levels_dir, &options.level)?;
+    let level = &bundle.level;
+    let mut session = ServerSession::new(&bundle, config(&options))?;
+    announce(&options, |name| session.announce_on_lan(name));
     println!(
         "mosswake server: level `{}` on {} (protocol v{}, up to {} players)",
         level.id,
@@ -125,9 +139,11 @@ fn server(args: &[String]) -> Result<()> {
 }
 
 fn host(args: &[String]) -> Result<()> {
-    let options = parse_options(args, true)?;
-    let level = load_level(&options.levels_dir, &options.level)?;
-    let mut session = HostSession::new(&level, config(&options), &options.name)?;
+    let options = parse_options(args, "Host")?;
+    let bundle = load_level(&options.levels_dir, &options.level)?;
+    let level = &bundle.level;
+    let mut session = HostSession::new(&bundle, config(&options), &options.name)?;
+    announce(&options, |name| session.server().announce_on_lan(name));
     println!(
         "mosswake host: level `{}` on {} — host mode is not rendered yet (#14; solo \
          rendering: `mosswake play`), the local player stands still",
@@ -146,12 +162,138 @@ fn host(args: &[String]) -> Result<()> {
     })
 }
 
+/// Turns LAN announcements on unless `--no-announce` (a failure only warns).
+fn announce(options: &Options, enable: impl FnOnce(&str) -> Result<()>) {
+    if !options.announce {
+        return;
+    }
+    match enable(&options.name) {
+        Ok(()) => println!("announced on the LAN as \"{}\"", options.name),
+        Err(e) => eprintln!("warning: LAN announcement disabled: {e:#}"),
+    }
+}
+
+/// `mosswake lan`: listens for announcements and prints the games heard.
+fn lan(args: &[String]) -> Result<()> {
+    let mut seconds = 3.0_f32;
+    let mut port = mw_net::DISCOVERY_PORT;
+    let mut args = args.iter();
+    while let Some(arg) = args.next() {
+        let mut value = || {
+            args.next()
+                .with_context(|| format!("{arg} needs a value\n{USAGE}"))
+        };
+        match arg.as_str() {
+            "--seconds" => seconds = value()?.parse().context("invalid --seconds")?,
+            "--port" => port = value()?.parse().context("invalid --port")?,
+            other => bail!("unknown option `{other}`\n{USAGE}"),
+        }
+    }
+    let mut browser = mw_net::Browser::bind(port).with_context(|| {
+        format!("cannot listen on discovery port {port} (another browser running?)")
+    })?;
+    let step = Duration::from_millis(100);
+    let steps = (seconds.max(0.1) / step.as_secs_f32()).ceil() as u32;
+    for _ in 0..steps {
+        sleep(step);
+        browser.update(step)?;
+    }
+    let games = browser.games();
+    if games.is_empty() {
+        println!("no game found on the LAN (port {port}) in {seconds} s");
+    }
+    for game in games {
+        let a = &game.announcement;
+        let status = match (game.compatible(), game.full()) {
+            (false, _) => format!("incompatible (protocol v{})", a.protocol_version),
+            (true, true) => "full".to_owned(),
+            (true, false) => "open".to_owned(),
+        };
+        println!(
+            "{:<22} {:<24} level {:<16} {}/{} players  {status}",
+            game.addr, a.name, a.level, a.players, a.max_players
+        );
+    }
+    Ok(())
+}
+
+/// `mosswake proxy`: forwards a game through simulated latency, jitter and loss.
+fn proxy(args: &[String]) -> Result<()> {
+    let mut to: Option<SocketAddr> = None;
+    let mut port = 47810u16;
+    let mut conditions = mw_net::Conditions::default();
+    let mut args = args.iter();
+    while let Some(arg) = args.next() {
+        let mut value = || {
+            args.next()
+                .with_context(|| format!("{arg} needs a value\n{USAGE}"))
+        };
+        match arg.as_str() {
+            "--to" => {
+                let target = value()?;
+                let with_port = if target.contains(':') {
+                    target.clone()
+                } else {
+                    format!("{target}:{DEFAULT_PORT}")
+                };
+                to = Some(
+                    with_port
+                        .parse()
+                        .with_context(|| format!("invalid address `{target}`"))?,
+                );
+            }
+            "--port" => port = value()?.parse().context("invalid --port")?,
+            "--latency" => {
+                conditions.latency = Duration::from_millis(
+                    value()?.parse().context("--latency expects milliseconds")?,
+                )
+            }
+            "--jitter" => {
+                conditions.jitter = Duration::from_millis(
+                    value()?.parse().context("--jitter expects milliseconds")?,
+                )
+            }
+            "--loss" => {
+                conditions.loss = value()?
+                    .parse::<f32>()
+                    .context("--loss expects a percentage")?
+                    / 100.0
+            }
+            other => bail!("unknown option `{other}`\n{USAGE}"),
+        }
+    }
+    let to = to.with_context(|| format!("--to is required\n{USAGE}"))?;
+    let mut link = mw_net::LinkConditioner::bind(
+        SocketAddr::from((Ipv4Addr::UNSPECIFIED, port)),
+        to,
+        conditions,
+    )
+    .with_context(|| format!("cannot listen on port {port}"))?;
+    println!(
+        "mosswake proxy: :{port} -> {to} (latency {:?} each way, jitter {:?}, loss {:.1} %)",
+        conditions.latency,
+        conditions.jitter,
+        conditions.loss * 100.0
+    );
+    let step = Duration::from_millis(1);
+    let mut last = Instant::now();
+    loop {
+        sleep(step);
+        let now = Instant::now();
+        link.update(now - last)?;
+        last = now;
+    }
+}
+
 fn main() -> Result<()> {
     let args: Vec<String> = std::env::args().skip(1).collect();
     match args.first().map(String::as_str) {
         Some("server") => server(&args[1..]),
         Some("host") => host(&args[1..]),
+        Some("lan") => lan(&args[1..]),
         Some("play") => mosswake::play::run(&args[1..]),
+        Some("join") => mosswake::join::run(&args[1..]),
+        Some("proxy") => proxy(&args[1..]),
         Some("--version") => {
             println!("mosswake {}", env!("CARGO_PKG_VERSION"));
             Ok(())

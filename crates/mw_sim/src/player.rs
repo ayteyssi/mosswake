@@ -106,8 +106,17 @@ pub fn spawn_player(world: &mut World, player: PlayerId) -> SimId {
         size: Vec2::new(rules.player_width, rules.player_height),
         gravity_scale: 1.0,
     };
+    let health = crate::combat::Health::new(rules.player_health);
     let id = world.resource_mut::<SimIds>().allocate();
-    world.spawn((id, Player(player), body, Position(feet)));
+    world.spawn((
+        id,
+        Player(player),
+        body,
+        Position(feet),
+        health,
+        crate::combat::Hurtbox::from_size(body.size),
+        crate::combat::MeleeState::default(),
+    ));
     id
 }
 
@@ -225,7 +234,7 @@ fn jump(
     }
 }
 
-fn update_state(
+pub(crate) fn update_state(
     rules: Res<Rules>,
     mut players: Query<(&PlayerControl, &Contacts, &Velocity, &mut PlayerState), With<Player>>,
 ) {

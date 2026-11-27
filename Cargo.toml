@@ -1,6 +1,6 @@
 [workspace]
 resolver = "2"
-members = ["crates/*", "bins/*"]
+members = ["crates/*", "bins/*", "xtask"]
 
 [workspace.package]
 version = "0.1.0"
@@ -16,13 +16,15 @@ repository = "https://github.com/ayteyssi/mosswake"
 # Bevy: headless crates (mw_sim) use no default features; client crates opt into rendering features.
 bevy = { version = "0.20.1", default-features = false }
 # Same major version as Bevy's own `image` dependency (bevy_image), so it is shared.
-image = { version = "0.25.10", default-features = false }
+image = { version = "0.25.10", default-features = false, features = ["png"] }
 serde = { version = "1.0.229", features = ["derive"] }
 serde_json = "1.0.154"
 # Networking (mw_net): transport-agnostic core + netcode UDP transport, compact serde codec.
 renet = "2.0.1"
 renet_netcode = "2.0.1"
 postcard = { version = "1.2.0", features = ["use-std"] }
+# Content hash of transferred levels (cache key and integrity check).
+sha2 = "0.11.2"
 thiserror = "2.0.21"
 # Scripting (sandboxed by construction): `sync` so the engine can live in a Bevy resource;
 # `no_time` removes wall-clock functions and `no_module` removes `import` / file access;
