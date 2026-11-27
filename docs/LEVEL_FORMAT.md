@@ -81,10 +81,10 @@ mécanique non implémentée fait **refuser le niveau** au chargement. Distances
 | `wall_jump_speed_x` / `wall_jump_speed_y` | nombre > 0 | `280.0` / `600.0` | Impulsion loin du mur / contre la gravité (u/s). |
 | `wall_jump_lock` | secondes ≥ 0 | `0.1` | Durée sans contrôle horizontal après le wall-jump (6 ticks). |
 
-Mécaniques disponibles : `movement` (course), `jump` (saut), `dash`, `double_jump` et `wall_jump`.
+Mécaniques disponibles : `movement` (course), `jump` (saut), `dash`, `double_jump`, `wall_jump` et `melee`.
 Les trois dernières sont enregistrées mais **désactivées par défaut**. Exemple :
 `"mechanics": ["movement", "jump", "dash", "double_jump", "wall_jump"]`.
-`melee` sera ajouté par #7. Toutes les durées sont arrondies au tick le plus proche.
+`melee` active le combat de #7. Toutes les durées sont arrondies au tick le plus proche.
 
 - `dash` : nouveau front de `DASH`, axe horizontal ou orientation précédente, direction figée
   pendant le dash. Gravité suspendue, collision solide conservée. Une charge avant de retoucher
@@ -101,10 +101,26 @@ restent des fonctionnalités de `jump`. Sur un même tick : saut au sol/coyote �
 aérien ; seul le premier possible est exécuté, puis un départ de dash prend la priorité sur la
 vitesse. Pendant un dash en cours, les sauts sont ignorés.
 
+### Paramètres de combat (`Rules`)
+| Clé | Type | Défaut | Description |
+|---|---|---|---|
+| `player_health` | entier > 0 | `5` | PV maximum/initial des nouveaux joueurs. |
+| `melee_damage` | entier > 0 | `1` | Dégâts d'un coup. |
+| `melee_reach` | nombre > 0 | `32.0` | Portée depuis le bord de la hitbox du corps, unités monde. |
+| `melee_thickness` | nombre > 0 | `32.0` | Épaisseur du coup sur l'autre axe, unités monde. |
+| `melee_duration` | secondes > 0 | `0.1` | Durée active, arrondie en ticks (minimum 1). |
+| `melee_cooldown` | secondes ≥ 0 | `0.25` | Délai entre démarrages de coups (minimum 1 tick). |
+| `damage_invincibility` | secondes ≥ 0 | `0.5` | Invincibilité après un impact accepté. |
+| `hit_stun` | secondes ≥ 0 | `0.1` | Durée pendant laquelle le knockback prime sur les déplacements. |
+| `knockback_x` / `knockback_y` | nombre ≥ 0 | `260.0` / `180.0` | Vitesse imposée pendant le hit-stun : X s'éloigne de la source, Y contre la gravité. |
+| `pogo_speed` | nombre ≥ 0 | `420.0` | Vitesse de rebond d'un coup vers le bas contre ennemi/hazard. |
+
 **Repères de level design (règles par défaut)** : un saut monte de 4 tiles au maximum. Prévoir
 **3 tiles au plus** entre deux surfaces pour un saut confortable. En élan, on franchit ~4 tiles
 de vide à niveau égal, davantage en descendant. Le joueur passe sous un plafond à 2 tiles.
 `crates/mw_sim/tests/tutorial.rs` montre comment vérifier un parcours par un test headless.
+
+Le combat est optionnel : ajouter `melee` à `rules.mechanics` pour l’activer.
 
 Cette table est mise à jour par chaque issue qui ajoute un champ à `Rules`.
 

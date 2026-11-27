@@ -67,6 +67,19 @@ pub struct Rules {
     pub wall_jump_speed_y: f32,
     /// Time before horizontal movement can override a wall-jump impulse.
     pub wall_jump_lock: f32,
+
+    // --- Combat and `melee` mechanic ---
+    pub player_health: u32,
+    pub melee_damage: u32,
+    pub melee_reach: f32,
+    pub melee_thickness: f32,
+    pub melee_duration: f32,
+    pub melee_cooldown: f32,
+    pub damage_invincibility: f32,
+    pub hit_stun: f32,
+    pub knockback_x: f32,
+    pub knockback_y: f32,
+    pub pogo_speed: f32,
 }
 
 impl Default for Rules {
@@ -94,6 +107,17 @@ impl Default for Rules {
             wall_jump_speed_x: 280.0,
             wall_jump_speed_y: 600.0,
             wall_jump_lock: 0.1,
+            player_health: 5,
+            melee_damage: 1,
+            melee_reach: 32.0,
+            melee_thickness: 32.0,
+            melee_duration: 0.1,
+            melee_cooldown: 0.25,
+            damage_invincibility: 0.5,
+            hit_stun: 0.1,
+            knockback_x: 260.0,
+            knockback_y: 180.0,
+            pogo_speed: 420.0,
         }
     }
 }
@@ -177,6 +201,25 @@ impl Rules {
             (self.dash_cooldown, "dash_cooldown"),
             (self.wall_slide_speed, "wall_slide_speed"),
             (self.wall_jump_lock, "wall_jump_lock"),
+        ] {
+            check(non_negative(value), &format!("{name} must be >= 0"));
+        }
+        check(self.player_health > 0, "player_health must be > 0");
+        check(self.melee_damage > 0, "melee_damage must be > 0");
+        for (value, name) in [
+            (self.melee_reach, "melee_reach"),
+            (self.melee_thickness, "melee_thickness"),
+            (self.melee_duration, "melee_duration"),
+        ] {
+            check(positive(value), &format!("{name} must be > 0"));
+        }
+        for (value, name) in [
+            (self.melee_cooldown, "melee_cooldown"),
+            (self.damage_invincibility, "damage_invincibility"),
+            (self.hit_stun, "hit_stun"),
+            (self.knockback_x, "knockback_x"),
+            (self.knockback_y, "knockback_y"),
+            (self.pogo_speed, "pogo_speed"),
         ] {
             check(non_negative(value), &format!("{name} must be >= 0"));
         }

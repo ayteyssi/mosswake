@@ -161,3 +161,12 @@ Un client trouve son propre corps avec `snapshot.player(mon_player_id)`. L'encod
 fait **partie du protocole** : un test (`bins/mosswake/tests/server.rs`) fige ses octets, et toute
 modification des types de `mw_sim::snapshot` (ou de ce qu'ils contiennent : `Contacts`,
 `PlayerControl`, `MobilityState`, `PlayerState`, `Facing`) incrémente `PROTOCOL_VERSION`.
+
+### État de combat (protocole v3, #7)
+`BodySnapshot.combat` contient éventuellement `Health` (PV, invincibilité, hit-stun et
+knockback), `Hurtbox`, `MeleeState` (cooldown), `Hitbox` (direction, taille/offset, dégâts,
+durée restante, cibles déjà touchées, rebond déjà consommé), et le marqueur `PogoSurface`.
+Les cibles d'un coup sont triées (`BTreeSet<SimId>`). Ce contenu est nécessaire au rendu
+futur des PV et au rejeu sans double impact après réconciliation. Les corps sans composant
+de combat ont `combat: None`. Le format de `PlayerInput` et les canaux sont inchangés.
+Le protocole v3 conserve les données de mobilité de la v2 (#6) et ajoute le combat.
