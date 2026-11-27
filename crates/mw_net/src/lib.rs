@@ -11,11 +11,13 @@
 use std::time::Duration;
 
 mod client;
+pub mod discovery;
 pub mod handshake;
 pub mod protocol;
 mod server;
 
 pub use client::{ClientState, NetClient};
+pub use discovery::{Announcement, Announcer, Browser, DiscoveredGame};
 pub use handshake::RejectReason;
 pub use protocol::{
     Channel, ClientMessage, LeaveReason, PlayerInfo, ServerMessage, PROTOCOL_VERSION,
@@ -25,7 +27,7 @@ pub use server::{NetServer, NetServerConfig, ServerNetEvent};
 /// Default game port (UDP).
 pub const DEFAULT_PORT: u16 = 47800;
 
-/// LAN discovery broadcast port (UDP), used by the discovery issue.
+/// LAN discovery broadcast port (UDP), see [`discovery`].
 pub const DISCOVERY_PORT: u16 = 47801;
 
 /// Netcode application id: identifies Mosswake traffic. **Never changes**: protocol versions
