@@ -261,14 +261,18 @@ impl TilesetAtlas {
 
     /// Terrain pieces of `terrain` drawn for the neighborhood `grid`, in id order.
     /// Several results are visual variants; pick one deterministically (e.g. by position).
+    ///
+    /// The results borrow only the atlas, not the arguments, so they can outlive a
+    /// neighborhood computed on the fly.
     pub fn autotile_candidates<'a>(
         &'a self,
-        terrain: &'a str,
-        grid: &'a Neighborhood,
-    ) -> impl Iterator<Item = (&'a str, &'a PieceDef)> + 'a {
+        terrain: &str,
+        grid: &Neighborhood,
+    ) -> impl Iterator<Item = (&'a str, &'a PieceDef)> + use<'a> {
+        let (terrain, grid) = (terrain.to_owned(), *grid);
         self.pieces.iter().filter_map(move |(id, piece)| {
             let rule = piece.autotile.as_ref()?;
-            (rule.terrain == terrain && rule.neighbors.matches(grid))
+            (rule.terrain == terrain && rule.neighbors.matches(&grid))
                 .then_some((id.as_str(), piece))
         })
     }
