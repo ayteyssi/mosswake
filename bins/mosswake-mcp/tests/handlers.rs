@@ -304,3 +304,76 @@ fn symlinks_cannot_redirect_level_or_script_reads_and_writes() {
     })))
     .contains("symlinks"));
 }
+
+/// #48: a legend id unknown to the atlas is refused on write, without touching any file.
+#[test]
+fn unknown_legend_ids_are_refused_without_writing() {
+    let (dir, server) = setup();
+    create(&server);
+    ok(server.set_tiles(Parameters(tile())));
+    let path = dir.path().join("demo/level.json");
+    let before = fs::read(&path).unwrap();
+
+    let platform = |tile_id: &str| {
+        let mut t = tile();
+        t.layer = "platforms".into();
+        t.kind = Some(LayerType::Solid);
+        t.y = 3;
+        t.width = 3;
+        t.tile = "=".into();
+        t.tile_id = Some(tile_id.into());
+        Parameters(t)
+    };
+    let message = error(server.set_tiles(platform("mossy_platform"))); // not in the atlas
+    assert!(message.contains("unknown_tile_id"), "{message}");
+    assert!(message.contains("mossy_platform"), "{message}");
+    assert_eq!(fs::read(&path).unwrap(), before, "level.json untouched");
+
+    // The same write with a real atlas piece goes through.
+    ok(server.set_tiles(platform("platform_2x1_a")));
+}
+
+/// #48: levels edited outside the MCP are checked the same way when read.
+#[test]
+fn reads_and_validate_level_report_unknown_legend_ids() {
+    let (dir, server) = setup();
+    create(&server);
+    ok(server.set_tiles(Parameters(tile())));
+    let path = dir.path().join("demo/level.json");
+    let mut bundle = LevelBundle::load(dir.path().join("demo")).unwrap();
+    bundle.level.legend.insert('#', "mossy_grnd".into()); // typo, by hand
+    fs::write(&path, bundle.level.to_json().unwrap()).unwrap();
+
+    let codes = |errors: &Value| -> Vec<String> {
+        errors
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|e| e["code"].as_str().unwrap().to_string())
+            .collect()
+    };
+    let validated = ok(server.validate_level(id()));
+    assert_eq!(validated["valid"], json!(false));
+    assert!(codes(&validated["errors"]).contains(&"unknown_tile_id".to_string()));
+    assert!(codes(&ok(server.get_level(id()))["errors"]).contains(&"unknown_tile_id".to_string()));
+    let listed = ok(server.list_levels());
+    assert!(codes(&listed["levels"][0]["errors"]).contains(&"unknown_tile_id".to_string()));
+}
+
+/// #48: what `list_palette` offers is exactly what validation accepts.
+#[test]
+fn palette_and_validation_share_one_source() {
+    let dir = tempfile::tempdir().unwrap();
+    let atlas = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../assets/tilesets/mossy");
+    let store = LevelStore::new(dir.path(), atlas).unwrap();
+    let palette = store.palette();
+    let mut offered: std::collections::BTreeSet<String> = palette["terrains"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|t| t.as_str().unwrap().to_string())
+        .collect();
+    offered.extend(palette["pieces"].as_object().unwrap().keys().cloned());
+    assert_eq!(&offered, store.tile_ids());
+    assert!(offered.contains("mossy_ground") && offered.contains("platform_2x1_a"));
+}
