@@ -158,5 +158,9 @@ Les frames ne sont **pas rognées** : les PNG sont conservés tels quels. Mesure
 toutes les frames décodées en RGBA pleine résolution occupent **~1011 Mio**. Rognées à l'union
 opaque de chaque animation, elles occupent ~471 Mio. Comme les sprites s'affichent bien plus petits
 que leur résolution source, une réduction (×4) est le vrai levier. Voir l'issue #30 (outil `xtask`
-qui génère des frames rognées et réduites avec un manifest cohérent). D'ici là, le rendu ne doit
-charger que les animations des sprites présents dans le niveau.
+qui génère des frames rognées et réduites avec un manifest cohérent).
+
+Depuis #10, le rendu **réduit chaque texture au chargement** à ~64 px par tile (`mw_render::textures`)
+avant l'envoi au GPU, et ne charge que les sprites présents dans le niveau : la VRAM est maîtrisée.
+Restent le temps de décodage des PNG pleine taille et la RAM de pointe au démarrage, que #30
+réglera en pré-calculant les frames.

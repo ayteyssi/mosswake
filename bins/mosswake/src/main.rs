@@ -1,6 +1,7 @@
 //! Mosswake entry point.
 //!
 //! ```text
+//! mosswake play <level> [--autoplay] [--screenshot <file.png> [--at <seconds>]]
 //! mosswake server --headless --level <id> [--port <port>] [--max-players <n>] [--levels-dir <dir>]
 //! mosswake host --level <id> [--port <port>] [--name <name>] [--max-players <n>] [--levels-dir <dir>]
 //! ```
@@ -19,6 +20,7 @@ use mw_core::input::PlayerInput;
 use mw_net::{ServerNetEvent, DEFAULT_PORT};
 
 const USAGE: &str = "usage:
+  mosswake play <level> [--autoplay] [--screenshot <file.png> [--at <seconds>]]
   mosswake server --headless --level <id> [--port <port>] [--max-players <n>] [--levels-dir <dir>]
   mosswake host --level <id> [--port <port>] [--name <name>] [--max-players <n>] [--levels-dir <dir>]";
 
@@ -36,7 +38,7 @@ fn parse_options(args: &[String], allow_name: bool) -> Result<Options> {
         level: String::new(),
         port: DEFAULT_PORT,
         max_players: 4,
-        levels_dir: PathBuf::from("levels"),
+        levels_dir: mosswake::default_levels_dir(),
         name: "Host".into(),
     };
     let mut args = args.iter();
@@ -129,8 +131,8 @@ fn host(args: &[String]) -> Result<()> {
     let level = &bundle.level;
     let mut session = HostSession::new(&bundle, config(&options), &options.name)?;
     println!(
-        "mosswake host: level `{}` on {} — rendering is not implemented yet (#10), \
-         the local player stands still",
+        "mosswake host: level `{}` on {} — host mode is not rendered yet (#14; solo \
+         rendering: `mosswake play`), the local player stands still",
         level.id,
         session.server().local_addr()
     );
@@ -151,6 +153,7 @@ fn main() -> Result<()> {
     match args.first().map(String::as_str) {
         Some("server") => server(&args[1..]),
         Some("host") => host(&args[1..]),
+        Some("play") => mosswake::play::run(&args[1..]),
         Some("--version") => {
             println!("mosswake {}", env!("CARGO_PKG_VERSION"));
             Ok(())
