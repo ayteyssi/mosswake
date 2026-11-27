@@ -11,6 +11,7 @@
 use std::time::Duration;
 
 mod client;
+pub mod conditioner;
 pub mod discovery;
 pub mod handshake;
 pub mod protocol;
@@ -18,6 +19,7 @@ mod server;
 pub mod transfer;
 
 pub use client::{ClientState, NetClient};
+pub use conditioner::{Conditions, LinkConditioner};
 pub use discovery::{Announcement, Announcer, Browser, DiscoveredGame};
 pub use handshake::RejectReason;
 pub use protocol::{

@@ -445,6 +445,40 @@ pub struct CombatSnapshot {
     pub pogo_surface: bool,
 }
 impl CombatSnapshot {
+    /// Makes `entity`'s combat components match `snapshot` exactly (inserting or removing
+    /// each one), for [`crate::Snapshot::restore`].
+    pub(crate) fn restore(snapshot: Option<&Self>, entity: &mut EntityWorldMut) {
+        let empty = Self {
+            health: None,
+            hurtbox: None,
+            melee: None,
+            hitbox: None,
+            pogo_surface: false,
+        };
+        let s = snapshot.unwrap_or(&empty);
+        match s.health {
+            Some(c) => entity.insert(c),
+            None => entity.remove::<Health>(),
+        };
+        match s.hurtbox {
+            Some(c) => entity.insert(c),
+            None => entity.remove::<Hurtbox>(),
+        };
+        match s.melee {
+            Some(c) => entity.insert(c),
+            None => entity.remove::<MeleeState>(),
+        };
+        match &s.hitbox {
+            Some(c) => entity.insert(c.clone()),
+            None => entity.remove::<Hitbox>(),
+        };
+        if s.pogo_surface {
+            entity.insert(PogoSurface);
+        } else {
+            entity.remove::<PogoSurface>();
+        }
+    }
+
     pub(crate) fn capture(world: &World, entity: Entity) -> Option<Self> {
         let value = Self {
             health: world.get::<Health>(entity).copied(),
