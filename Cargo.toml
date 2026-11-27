@@ -15,6 +15,8 @@ repository = "https://github.com/ayteyssi/mosswake"
 [workspace.dependencies]
 # Bevy: headless crates (mw_sim) use no default features; client crates opt into rendering features.
 bevy = { version = "0.20.1", default-features = false }
+# Same major version as Bevy's own `image` dependency (bevy_image), so it is shared.
+image = { version = "0.25.10", default-features = false }
 serde = { version = "1.0.229", features = ["derive"] }
 serde_json = "1.0.154"
 # Networking (mw_net): transport-agnostic core + netcode UDP transport, compact serde codec.
@@ -37,9 +39,13 @@ mw_core = { path = "crates/mw_core" }
 mw_level = { path = "crates/mw_level" }
 mw_net = { path = "crates/mw_net" }
 mw_sim = { path = "crates/mw_sim" }
+mw_render = { path = "crates/mw_render" }
 
 [profile.dev]
 opt-level = 1
 
 [profile.dev.package."*"]
 opt-level = 3
+# No debug info for dependencies: with Bevy it dominates build size (disk) and link time,
+# and we rarely step into engine code. Our own crates keep full debug info.
+debug = false
