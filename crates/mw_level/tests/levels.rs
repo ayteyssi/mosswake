@@ -64,6 +64,12 @@ fn tutorial_has_what_the_sim_needs() {
     let level = &bundle.level;
     assert!(level.spawns.len() >= 2, "two players can spawn");
     assert!(level.layers.iter().any(|l| l.kind == LayerKind::Solid));
+    assert!(level.layers.iter().any(|l| l.kind == LayerKind::Platform));
+    assert!(level
+        .layers
+        .iter()
+        .filter(|l| l.kind == LayerKind::Solid)
+        .all(|l| l.tiles.iter().all(|row| !row.contains('='))));
     assert!(level.entities.iter().any(|e| e.kind.starts_with("slime_")));
     // Each spawn stands on solid ground.
     for s in &level.spawns {

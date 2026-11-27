@@ -13,8 +13,16 @@ use crate::{Level, LevelError, CURRENT_SCHEMA_VERSION};
 /// A migration upgrades a raw level from version `N` to `N + 1`.
 type Migration = fn(&mut Value) -> Result<(), String>;
 
-/// `MIGRATIONS[i]` upgrades from version `i + 1` to `i + 2`. Empty while only v1 exists.
-const MIGRATIONS: &[Migration] = &[];
+/// `MIGRATIONS[i]` upgrades from version `i + 1` to `i + 2`.
+const MIGRATIONS: &[Migration] = &[migrate_v1_to_v2];
+
+/// V2 adds an explicit platform kind. Old layers keep their original collision behavior;
+/// converting a solid layer into a platform is a level-design choice, not a migration.
+fn migrate_v1_to_v2(raw: &mut Value) -> Result<(), String> {
+    let object = raw.as_object_mut().ok_or("level must be an object")?;
+    object.insert("schema_version".into(), Value::from(2));
+    Ok(())
+}
 
 // Every version below the current one needs a migration.
 const _: () = assert!(MIGRATIONS.len() + 1 == CURRENT_SCHEMA_VERSION as usize);
@@ -60,6 +68,27 @@ mod tests {
         let before = raw.clone();
         migrate(&mut raw).unwrap();
         assert_eq!(raw, before);
+    }
+
+    #[test]
+    fn v1_migration_preserves_layers_rules_and_scripts() {
+        let mut raw = json!({
+            "schema_version": 1, "id": "old", "name": "Old", "size": {"w": 1, "h": 1},
+            "legend": {"#": "mossy_ground"},
+            "layers": [{"name": "solid", "kind": "solid", "tiles": ["#"]},
+                       {"name": "decor", "kind": "decor", "tiles": ["."]},
+                       {"name": "hazard", "kind": "hazard", "tiles": ["."]}],
+            "spawns": [{"x": 0.5, "y": 1}], "rules": {"gravity": 900},
+            "scripts": ["scripts/main.rhai"]
+        });
+        let original = raw.clone();
+        migrate(&mut raw).unwrap();
+        let level = level_from_json(&original.to_string()).unwrap();
+        assert_eq!(level.schema_version, 2);
+        assert_eq!(level.layers[0].kind, crate::LayerKind::Solid);
+        raw["schema_version"] = Value::from(1);
+        assert_eq!(raw, original, "only the version changes");
+        assert_eq!(level_from_json(&level.to_json().unwrap()).unwrap(), level);
     }
 
     #[test]

@@ -49,6 +49,13 @@
 - `Collisions` : drapeaux `Contacts { grounded, on_ceiling, on_wall_left, on_wall_right }` par sondes de
   0,01 unité. `grounded` suit le sens de la gravité (gravité inversée → « sol » au-dessus).
   Les collisions entre entités (dégâts, triggers) s'ajouteront dans ce set.
+- Calques `platform` (schéma v2) : masque séparé des solides. Le balayage Y bloque une
+  plateforme seulement dans le sens de la gravité et si la face du corps est initialement à
+  l'extérieur de la face d'appui (pieds au-dessus du haut, ou tête sous le bas avec gravité
+  inversée). Aucun blocage X, aucun plafond, aucun rattrapage d'une boîte déjà dans la tile.
+  La sonde `grounded` réutilise ce balayage ; les sondes mur/plafond ne voient que les solides.
+  `CollisionGrid::sweep_with_gravity` prend la direction courante ; `sweep` conserve un raccourci
+  avec gravité vers le bas. Solide et plateforme superposés restent solides.
 - Hors de la grille : colonnes à gauche/droite **solides** (murs invisibles), lignes en dessous/au-dessus
   **vides** (on peut tomber hors du niveau ; la mort/respawn relève de #9).
 
