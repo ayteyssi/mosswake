@@ -50,6 +50,7 @@ pub enum LayerType {
     Solid,
     Decor,
     Hazard,
+    Platform,
 }
 
 impl From<LayerType> for LayerKind {
@@ -58,6 +59,7 @@ impl From<LayerType> for LayerKind {
             LayerType::Solid => Self::Solid,
             LayerType::Decor => Self::Decor,
             LayerType::Hazard => Self::Hazard,
+            LayerType::Platform => Self::Platform,
         }
     }
 }
@@ -69,7 +71,8 @@ pub struct SetTiles {
     pub id: String,
     /// Layer name. A missing layer is created only if kind is supplied.
     pub layer: String,
-    /// Kind of a newly created layer; cannot change an existing layer's kind.
+    /// Kind of a new layer. Platform blocks only in the gravity direction.
+    /// Cannot change an existing layer's kind.
     pub kind: Option<LayerType>,
     /// Leftmost cell of the rectangle, in tiles.
     pub x: u32,
