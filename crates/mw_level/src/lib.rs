@@ -19,7 +19,7 @@ pub use model::{EntityDef, Layer, LayerKind, Level, Props, RulesOverrides, Size,
 pub use validate::{is_valid_script_path, ValidationError};
 
 /// Schema version written by this build. See [`migrate`].
-pub const CURRENT_SCHEMA_VERSION: u32 = 1;
+pub const CURRENT_SCHEMA_VERSION: u32 = 2;
 
 /// Default world units per tile.
 pub const DEFAULT_TILE_SIZE: u32 = 32;

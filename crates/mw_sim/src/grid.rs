@@ -8,7 +8,7 @@ use bevy::math::Vec2;
 use bevy::prelude::Resource;
 use mw_level::Level;
 
-/// Which cells block movement. Built once per level from its `solid` layers.
+/// Solid cells and one-way platforms, built from the level layers.
 #[derive(Resource, Debug, Clone, PartialEq)]
 pub struct CollisionGrid {
     width: i32,
@@ -16,6 +16,7 @@ pub struct CollisionGrid {
     tile_size: f32,
     /// Row-major, `y = 0` first (bottom row).
     solid: Vec<bool>,
+    platform: Vec<bool>,
 }
 
 /// An axis-aligned box: `min` inclusive, `max` exclusive, in world units.
@@ -52,19 +53,21 @@ impl Aabb {
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct SweepResult {
     pub aabb: Aabb,
-    /// Whether the x / y movement was stopped by a solid cell.
+    /// Whether the x / y movement was stopped by a solid cell or supporting platform.
     pub blocked_x: bool,
     pub blocked_y: bool,
 }
 
 impl CollisionGrid {
-    /// Builds the grid from every [`mw_level::LayerKind::Solid`] layer of `level`.
+    /// Builds the grid from every solid and platform layer of `level`.
     pub fn from_level(level: &Level) -> Self {
         let (width, height) = (level.size.w as i32, level.size.h as i32);
         let mut solid = Vec::with_capacity((width * height).max(0) as usize);
+        let mut platform = Vec::with_capacity(solid.capacity());
         for y in 0..level.size.h {
             for x in 0..level.size.w {
                 solid.push(level.is_solid(x, y));
+                platform.push(level.is_platform(x, y));
             }
         }
         Self {
@@ -72,6 +75,7 @@ impl CollisionGrid {
             height,
             tile_size: level.tile_size as f32,
             solid,
+            platform,
         }
     }
 
@@ -90,6 +94,15 @@ impl CollisionGrid {
         self.solid[(y * self.width + x) as usize]
     }
 
+    /// One-way cell, never present outside the grid.
+    pub fn is_platform(&self, x: i32, y: i32) -> bool {
+        x >= 0
+            && x < self.width
+            && y >= 0
+            && y < self.height
+            && self.platform[(y * self.width + x) as usize]
+    }
+
     /// Cell indices covered by the half-open interval `[min, max)` on one axis.
     fn cells(&self, min: f32, max: f32) -> std::ops::RangeInclusive<i32> {
         let first = (min / self.tile_size).floor() as i32;
@@ -105,11 +118,19 @@ impl CollisionGrid {
     }
 
     /// Moves `aabb` by `delta`, x first then y, stopping flush against the first solid
-    /// cell on each axis. Every cell crossed is checked, so no speed can tunnel through.
+    /// cell on each axis, with downward gravity for platforms. Every cell crossed is checked,
+    /// so no speed can tunnel through.
     /// `aabb` must not already overlap a solid cell.
     pub fn sweep(&self, aabb: Aabb, delta: Vec2) -> SweepResult {
+        self.sweep_with_gravity(aabb, delta, -1.0)
+    }
+
+    /// Like [`Self::sweep`], with the current gravity direction (-1 down, +1 up).
+    /// Platforms block only motion along gravity, from outside their supporting face.
+    /// They never block horizontal movement or movement against gravity.
+    pub fn sweep_with_gravity(&self, aabb: Aabb, delta: Vec2, gravity_dir: f32) -> SweepResult {
         let (aabb, blocked_x) = self.sweep_x(aabb, delta.x);
-        let (aabb, blocked_y) = self.sweep_y(aabb, delta.y);
+        let (aabb, blocked_y) = self.sweep_y(aabb, delta.y, gravity_dir);
         SweepResult {
             aabb,
             blocked_x,
@@ -141,10 +162,21 @@ impl CollisionGrid {
         (aabb.translated(Vec2::new(dx, 0.0)), false)
     }
 
-    fn sweep_y(&self, aabb: Aabb, dy: f32) -> (Aabb, bool) {
+    fn sweep_y(&self, aabb: Aabb, dy: f32, gravity_dir: f32) -> (Aabb, bool) {
         let ts = self.tile_size;
         let columns = self.cells(aabb.min.x, aabb.max.x);
-        let row_blocks = |y: i32| columns.clone().any(|x| self.is_solid(x, y));
+        let row_blocks = |y: i32| {
+            let support = if gravity_dir < 0.0 && dy < 0.0 {
+                aabb.min.y >= (y + 1) as f32 * ts
+            } else if gravity_dir > 0.0 && dy > 0.0 {
+                aabb.max.y <= y as f32 * ts
+            } else {
+                false
+            };
+            columns
+                .clone()
+                .any(|x| self.is_solid(x, y) || support && self.is_platform(x, y))
+        };
         // Rows outside the grid are empty: only scan the part of the path inside it.
         let (lo, hi) = (0, self.height - 1);
         if dy > 0.0 {

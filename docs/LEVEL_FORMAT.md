@@ -1,4 +1,4 @@
-# Format de niveau — schéma v1
+# Format de niveau — schéma v2
 
 Implémenté par la crate `mw_level` (sans Bevy), partagée par le jeu, l'éditeur et le serveur MCP.
 Exemple complet : [`levels/tutorial/level.json`](../levels/tutorial/level.json).
@@ -12,7 +12,7 @@ levels/<id>/
 ## Exemple
 ```json
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "id": "forest_01",
   "name": "Forêt moussue",
   "size": { "w": 8, "h": 4 },
@@ -24,11 +24,12 @@ levels/<id>/
       "kind": "solid",
       "tiles": [
         "#......#",
-        "#..===.#",
+        "#......#",
         "#......#",
         "###..###"
       ]
     },
+    { "name": "platforms", "kind": "platform", "tiles": ["........", "...===..", "........", "........"] },
     { "name": "thorns", "kind": "hazard", "tiles": ["........", "........", "........", "...^^..."] }
   ],
   "spawns": [ { "x": 1.5, "y": 1.0 } ],
@@ -41,7 +42,7 @@ levels/<id>/
 ## Champs
 | Champ | Type | Requis | Description |
 |---|---|---|---|
-| `schema_version` | entier | oui | Version du format. Actuelle : **1**. |
+| `schema_version` | entier | oui | Version du format. Actuelle : **2** (v1 migrée automatiquement). |
 | `id` | chaîne | oui | `[a-z0-9_]+`, identique au nom du dossier sous `levels/`. |
 | `name` | chaîne | oui | Nom affiché. |
 | `size` | `{ "w", "h" }` | oui | Taille de la grille **en tiles** (≥ 1×1). |
@@ -128,7 +129,7 @@ Cette table est mise à jour par chaque issue qui ajoute un champ à `Rules`.
 | Champ | Description |
 |---|---|
 | `name` | Nom unique non vide. |
-| `kind` | `solid` (collision), `decor` (visuel seulement) ou `hazard` (blesse au contact). |
+| `kind` | `solid` (collision pleine), `platform` (appui à sens unique), `decor` (visuel seulement) ou `hazard` (blesse au contact). |
 | `tiles` | Exactement `size.h` chaînes de `size.w` caractères. **La première chaîne est la ligne du haut**, pour que le fichier ressemble au niveau. |
 
 Caractères : `.` = vide (réservé, interdit dans `legend`) ; tout autre caractère doit figurer dans
@@ -138,13 +139,24 @@ Le calque détermine la collision : `=` utilise le terrain auto-tilé `mossy_gro
 plateformes d'une tile de haut. Un calque `hazard` peut répéter `thorns_tile`, une découpe
 d'épines dont le dessin tient dans une cellule (voir `docs/ASSETS.md`). La case entière est
 la zone de danger ; le canal alpha du sprite ne définit pas la collision. Dans le tutorial,
-le chemin prévu reste P1 → P2 → P3 au-dessus de la fosse ; les plateformes sont encore solides
-par le dessous, comportement suivi séparément par #34.
+le chemin P1 → P2 → P3 au-dessus de la fosse reste franchissable (test headless).
+
+Un calque `platform` se dessine comme les autres tiles, mais ne bloque que dans le **sens de
+la gravité** et depuis l'extérieur de sa face d'appui au début du tick :
+- gravité vers le bas (ou nulle) : les pieds doivent être au-dessus du haut de la tile ;
+- gravité inversée : le haut de la boîte doit être sous le bas de la tile.
+
+On peut traverser depuis l'autre face et par les côtés. Une boîte déjà dans la tile n'est pas
+ramenée sur sa face d'appui. Les plateformes ne créent ni mur latéral ni plafond ; l'appui est
+calculé par le balayage directionnel, y compris à très haute vitesse. En cas de superposition,
+un calque `solid` conserve ses collisions pleines. Aucune commande de descente volontaire
+(`drop`) n'est introduite. Le tutorial sépare son terrain solide et ses `=` en deux calques.
+
 
 ### Entités (`EntityDef`)
 | Champ | Description |
 |---|---|
-| `kind` | Type d'entité. Connus en v1 : `slime_green`, `slime_orange` (`mw_level::KNOWN_ENTITY_KINDS`). |
+| `kind` | Type d'entité. Connus en v2 : `slime_green`, `slime_orange` (`mw_level::KNOWN_ENTITY_KINDS`). |
 | `x`, `y` | Position (voir Coordonnées). |
 | `props` | Paramètres propres au type (objet libre, défaut `{}`). |
 
@@ -201,6 +213,11 @@ Charger puis sauvegarder un fichier canonique donne **exactement** les mêmes oc
 que tous les niveaux de `levels/` sont valides et canoniques.
 
 ## Versions et migrations
+
+**v1 → v2** ajoute `LayerKind::Platform` (`"platform"`). La migration ne modifie que
+`schema_version` : les anciens calques conservent leur type, leurs tiles et leur comportement.
+Transformer du solide en plateforme traversable reste un choix explicite du concepteur.
+Le tutorial livré a été converti explicitement et re-sauvegardé en v2.
 Au chargement, le JSON brut est mis à niveau version par version (`mw_level::migrate`) avant d'être
 désérialisé. Pour une évolution incompatible :
 1. incrémenter `CURRENT_SCHEMA_VERSION` ;
