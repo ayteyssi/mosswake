@@ -305,6 +305,86 @@ fn symlinks_cannot_redirect_level_or_script_reads_and_writes() {
     .contains("symlinks"));
 }
 
+#[cfg(unix)]
+#[test]
+fn atomic_edits_preserve_existing_file_permissions() {
+    use std::os::unix::fs::PermissionsExt;
+    for mode in [0o644, 0o640, 0o600, 0o660] {
+        let (dir, server) = setup();
+        create(&server);
+        let script = dir.path().join("demo/scripts/main.rhai");
+        let write = |source: &str| {
+            Parameters(WriteScript {
+                id: "demo".into(),
+                path: "scripts/main.rhai".into(),
+                source: source.into(),
+            })
+        };
+        ok(server.write_script(write("// initial\n")));
+        let level = dir.path().join("demo/level.json");
+        fs::set_permissions(&level, fs::Permissions::from_mode(mode)).unwrap();
+        fs::set_permissions(&script, fs::Permissions::from_mode(0o600)).unwrap();
+        let before = fs::read(&level).unwrap();
+        let mut invalid = tile();
+        invalid.y = 1; // covers the spawn
+        assert!(error(server.set_tiles(Parameters(invalid))).contains("spawn_in_solid"));
+        assert_eq!(fs::read(&level).unwrap(), before);
+        assert_eq!(
+            fs::metadata(&level).unwrap().permissions().mode() & 0o777,
+            mode
+        );
+        assert_eq!(
+            fs::metadata(&script).unwrap().permissions().mode() & 0o777,
+            0o600
+        );
+        assert_eq!(fs::read_to_string(&script).unwrap(), "// initial\n");
+
+        ok(server.set_tiles(Parameters(tile())));
+        assert_ne!(
+            fs::read(&level).unwrap(),
+            before,
+            "valid edit actually changed the file"
+        );
+        ok(server.write_script(write("// updated\n")));
+        assert_eq!(fs::read_to_string(&script).unwrap(), "// updated\n");
+        assert_eq!(
+            fs::metadata(&level).unwrap().permissions().mode() & 0o777,
+            mode
+        );
+        assert_eq!(
+            fs::metadata(&script).unwrap().permissions().mode() & 0o777,
+            0o600
+        );
+    }
+}
+
+#[cfg(unix)]
+#[test]
+fn new_files_follow_normal_creation_permissions_under_the_current_umask() {
+    use std::os::unix::fs::PermissionsExt;
+    let (dir, server) = setup();
+    let reference = dir.path().join("ordinary.txt");
+    fs::write(&reference, "ordinary file").unwrap();
+    let expected = fs::metadata(&reference).unwrap().permissions().mode() & 0o777;
+    create(&server);
+    ok(server.write_script(Parameters(WriteScript {
+        id: "demo".into(),
+        path: "scripts/new.rhai".into(),
+        source: "// created\n".into(),
+    })));
+    for rel in ["demo/level.json", "demo/scripts/new.rhai"] {
+        assert_eq!(
+            fs::metadata(dir.path().join(rel))
+                .unwrap()
+                .permissions()
+                .mode()
+                & 0o777,
+            expected,
+            "{rel} differs from an ordinary file created under the same umask"
+        );
+    }
+}
+
 /// #48: a legend id unknown to the atlas is refused on write, without touching any file.
 #[test]
 fn unknown_legend_ids_are_refused_without_writing() {
